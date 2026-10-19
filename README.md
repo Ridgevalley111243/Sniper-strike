@@ -37,6 +37,10 @@ flutter analyze
 Download it from the run's *Artifacts* → `truhive-android-apk`. The workflow signs with the
 debug key; add a release keystore before publishing to Google Play.
 
+**Web app:** every push to `main` deploys the web build to GitHub Pages
+(`.github/workflows/pages.yml`) at `https://<owner>.github.io/<repo>/`. In the repository's
+**Settings → Pages**, set **Source** to **GitHub Actions** (one-time).
+
 ## Architecture
 
 ```
