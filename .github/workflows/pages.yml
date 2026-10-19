@@ -31,6 +31,8 @@ jobs:
       # Project sites live under /<repo>/, so the app needs that base href.
       - run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
 
+      - run: python3 tool/slim_web_build.py build/web
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
