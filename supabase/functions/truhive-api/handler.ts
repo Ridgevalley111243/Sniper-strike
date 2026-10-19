@@ -1,11 +1,12 @@
 // TRUHive backend: one Edge Function implementing the API the app's
 // BackendSource expects (see README "Connecting a backend").
 //
-//   GET /api/health · /api/search?q= · /api/preview/:id · /api/download/:id · /api/lyrics/:id
+//   GET /api/health · /api/sources · /api/search?q=[&provider=] · /api/art?u=
+//       /api/preview/:id · /api/download/:id · /api/lyrics/:id
 //
 // Stateless by design: no database, no storage. Audio is streamed from the
 // provider to the user's device and never kept here.
-import { lrclib, plainLines, PROVIDERS, resolve, type Track } from "./providers.ts";
+import { artAllowed, lrclib, plainLines, PROVIDERS, resolve, type Track } from "./providers.ts";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -20,9 +21,10 @@ const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =
     headers: { ...CORS, "content-type": "application/json; charset=utf-8", ...extra },
   });
 
-async function search(q: string): Promise<Response> {
+async function search(q: string, only: string | null): Promise<Response> {
   if (!q.trim()) return json({ results: [] });
-  const active = PROVIDERS.filter((p) => p.enabled());
+  const active = PROVIDERS.filter((p) => p.enabled() && (!only || p.prefix === only));
+  if (active.length === 0) return json({ error: "unknown provider" }, 404);
   const settled = await Promise.allSettled(active.map((p) => p.search(q)));
   const results: Track[] = [];
   const errors: string[] = [];
@@ -60,6 +62,24 @@ async function audio(id: string, kind: "preview" | "download", req: Request): Pr
   return new Response(up.body, { status: up.status, headers: out });
 }
 
+/** Cover images, re-served with CORS so the web app can draw them. */
+async function art(raw: string | null): Promise<Response> {
+  let u: URL;
+  try {
+    u = new URL(raw ?? "");
+  } catch {
+    return json({ error: "bad url" }, 400);
+  }
+  if (!artAllowed(u)) return json({ error: "host not allowed" }, 403);
+  const up = await fetch(u, { headers: { "user-agent": "TRUHive/1.0" }, signal: AbortSignal.timeout(8000) });
+  const type = up.headers.get("content-type") ?? "";
+  if (!up.ok || !type.startsWith("image/")) return json({ error: `image HTTP ${up.status}` }, 502);
+  const out = new Headers(CORS);
+  out.set("content-type", type);
+  out.set("cache-control", "public, max-age=604800, immutable");
+  return new Response(up.body, { headers: out });
+}
+
 async function lyrics(id: string): Promise<Response> {
   const r = resolve(id);
   if (!r) return json({ error: "unknown track" }, 404);
@@ -80,15 +100,26 @@ export async function handle(req: Request): Promise<Response> {
   if (req.method !== "GET") return json({ error: "method not allowed" }, 405);
   const url = new URL(req.url);
   // The function is mounted at /functions/v1/truhive-api, so match from /api/.
-  const m = url.pathname.match(/\/api\/(health|search|preview|download|lyrics)(?:\/(.+))?$/);
+  const m = url.pathname.match(/\/api\/(health|sources|search|art|preview|download|lyrics)(?:\/(.+))?$/);
   if (!m) return json({ error: "not found" }, 404);
   const id = m[2] ? decodeURIComponent(m[2]) : "";
   try {
     switch (m[1]) {
       case "health":
         return json({ ok: true, providers: PROVIDERS.filter((p) => p.enabled()).map((p) => p.name) });
+      case "sources":
+        return json({
+          sources: PROVIDERS.filter((p) => p.enabled()).map((p) => ({
+            id: p.prefix,
+            name: p.name,
+            description: p.description,
+            ...p.can,
+          })),
+        }, 200, { "cache-control": "public, max-age=3600" });
       case "search":
-        return await search(url.searchParams.get("q") ?? "");
+        return await search(url.searchParams.get("q") ?? "", url.searchParams.get("provider"));
+      case "art":
+        return await art(url.searchParams.get("u"));
       case "preview":
       case "download":
         return await audio(id, m[1], req);

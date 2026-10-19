@@ -20,6 +20,7 @@ function fakeFetch(fail: Set<string> = new Set()) {
     if (url.startsWith("https://itunes.apple.com/search")) {
       return j({ results: [
         { kind: "song", trackId: 11, collectionId: 5, trackName: "Hello", artistName: "Adele", collectionName: "25",
+          artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/a/b/100x100bb.jpg",
           trackTimeMillis: 295000, primaryGenreName: "Pop", releaseDate: "2015-10-23T07:00:00Z", previewUrl: "https://audio.itunes/11.m4a" },
         { kind: "music-video", trackId: 12, trackName: "Video" },
       ] });
@@ -63,6 +64,9 @@ function fakeFetch(fail: Set<string> = new Set()) {
         { duration: 120, syncedLyrics: "[00:01.00] wrong length" },
         { duration: 294, syncedLyrics: "[00:01.50] Hello, it's me\n[01:02.25] I was wondering" },
       ]);
+    }
+    if (url.startsWith("https://is1-ssl.mzstatic.com/")) {
+      return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { headers: { "content-type": "image/jpeg" } });
     }
     if (url.startsWith("https://archive.org/download/") || url.startsWith("https://mp3")) {
       const range = new Headers(init?.headers).get("range");
@@ -168,4 +172,41 @@ Deno.test("CORS preflight and LRC parsing", async () => {
   const r = await handle(new Request(BASE + "/api/download/x", { method: "OPTIONS" }));
   assert(r.status === 204 && r.headers.get("access-control-allow-headers")!.includes("range"), "preflight");
   assert(parseLrc("[ar: x]\n[02:03.5]hi").length === 1 && parseLrc("[02:03.5]hi")[0].timeMs === 123500, "lrc");
+});
+
+Deno.test("sources lists each enabled provider with its capabilities", async () => {
+  fakeFetch();
+  const d = await (await get("/api/sources")).json();
+  const ids = d.sources.map((x: any) => x.id);
+  assert(JSON.stringify(ids) === JSON.stringify(["jm", "au", "ia", "it"]), JSON.stringify(ids));
+  const it = d.sources.find((x: any) => x.id === "it");
+  assert(it.name === "Apple Music" && it.preview && !it.download && it.lyrics, JSON.stringify(it));
+});
+
+Deno.test("search can be limited to one provider", async () => {
+  fakeFetch();
+  calls.length = 0;
+  const d = await (await get("/api/search?q=hello&provider=it")).json();
+  assert(d.results.length === 1 && d.results[0].id === "it:11", JSON.stringify(d));
+  assert(!calls.some((u) => u.includes("jamendo") || u.includes("audius") || u.includes("archive")), "only iTunes queried");
+  assert((await get("/api/search?q=hello&provider=zz")).status === 404, "unknown provider");
+});
+
+Deno.test("tracks carry real cover art", async () => {
+  fakeFetch();
+  const d = await (await get("/api/search?q=hello")).json();
+  const by = (id: string) => d.results.find((t: any) => t.id === id);
+  assert(by("it:11").artworkUrl === "https://is1-ssl.mzstatic.com/image/thumb/a/b/600x600bb.jpg", by("it:11").artworkUrl);
+  assert(by("ia:gd1977/d1t01.mp3").artworkUrl === "https://archive.org/services/img/gd1977", "IA art");
+});
+
+Deno.test("art proxy only serves provider image hosts", async () => {
+  fakeFetch();
+  const ok = await get("/api/art?u=" + encodeURIComponent("https://is1-ssl.mzstatic.com/image/thumb/a/b/600x600bb.jpg"));
+  assert(ok.status === 200 && ok.headers.get("content-type") === "image/jpeg", String(ok.status));
+  assert(ok.headers.get("access-control-allow-origin") === "*", "CORS on images");
+  for (const bad of ["https://evil.example/x.jpg", "http://is1-ssl.mzstatic.com/x.jpg", "https://mzstatic.com.evil.example/x.jpg", "nope"]) {
+    const r = await get("/api/art?u=" + encodeURIComponent(bad));
+    assert(r.status === 403 || r.status === 400, `${bad} -> ${r.status}`);
+  }
 });
