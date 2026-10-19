@@ -32,8 +32,12 @@ jobs:
       - run: >-
           flutter build web --release --base-href "/${{ github.event.repository.name }}/"
           --dart-define=TRUHIVE_BACKEND_URL=https://ypliibgdetwgbdlxjirg.supabase.co/functions/v1/truhive-api
+          --dart-define=TRUHIVE_BUILD=${{ github.sha }}
 
       - run: python3 tool/slim_web_build.py build/web
+
+      # New file names every build, so browsers never keep running an old version.
+      - run: python3 tool/cache_bust_web_build.py build/web
 
       - uses: actions/configure-pages@v5
 
