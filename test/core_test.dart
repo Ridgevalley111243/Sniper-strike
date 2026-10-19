@@ -136,4 +136,19 @@ void main() {
       expect(sm.health('indievault').name, 'unavailable');
     });
   });
+
+  group('source manager', () {
+    test('a backend connected later starts enabled; disconnecting sticks', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      SourceManager(prefs); // first launch: demo sources only
+      await prefs.setString('sources.backendUrl', 'https://example.test/fn');
+      final sm = SourceManager(prefs); // relaunch with a backend
+      expect(sm.isEnabled('backend'), isTrue);
+      expect(sm.isEnabled('openwave'), isTrue);
+      await sm.setBackendUrl('');
+      expect(SourceManager(prefs).backendUrl, isNull);
+      expect(SourceManager(prefs).byId('backend'), isNull);
+    });
+  });
 }

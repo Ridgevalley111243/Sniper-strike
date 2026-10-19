@@ -29,7 +29,9 @@ jobs:
       - run: flutter pub get
 
       # Project sites live under /<repo>/, so the app needs that base href.
-      - run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+      - run: >-
+          flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+          --dart-define=TRUHIVE_BACKEND_URL=https://ypliibgdetwgbdlxjirg.supabase.co/functions/v1/truhive-api
 
       - run: python3 tool/slim_web_build.py build/web
 

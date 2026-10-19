@@ -99,6 +99,31 @@ app. Their music — titles, artists, lyrics and audio — is original and gener
 `lib/audio/synth.dart`; nothing is fetched from anywhere. They simulate realistic latency and
 bandwidth, and IndieVault deliberately simulates an outage to exercise error handling.
 
+### The TRUHive backend (Supabase)
+
+`supabase/functions/truhive-api` is the backend: a single Supabase Edge Function that searches
+real providers in parallel and streams their audio to the device.
+
+| Provider | Search | Preview | Download | Lyrics |
+| --- | --- | --- | --- | --- |
+| Apple Music (iTunes Search API) | ✓ | 30 s clips | — | via LRCLIB |
+| Internet Archive (CC, public domain, Live Music Archive only) | ✓ | ✓ | ✓ | — |
+| Jamendo (needs `JAMENDO_CLIENT_ID`) | ✓ | ✓ | where the artist allows it | Jamendo / LRCLIB |
+| Audius | ✓ | ✓ | where the artist enabled it, ungated | — |
+
+It is **stateless**: no database tables, no Storage. Songs pass through to the user's device and are
+never kept on the server; nothing about users is recorded.
+
+The CI and Pages builds bundle its URL (`--dart-define=TRUHIVE_BACKEND_URL=…`), so fresh installs
+start on real sources; the demo sources stay available in **Manage Sources**.
+
+```bash
+supabase functions deploy truhive-api --no-verify-jwt     # public API, no sign-in
+supabase secrets set JAMENDO_CLIENT_ID=…                  # free at devportal.jamendo.com
+supabase secrets set AUDIUS_API_KEY=…                     # optional, higher rate limits
+deno test --allow-env supabase/functions/truhive-api       # offline tests with stubbed providers
+```
+
 ### Connecting a backend
 
 Real providers usually need private API keys, which must never ship inside the app. Run a TRUHive
