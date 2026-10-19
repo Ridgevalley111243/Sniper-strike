@@ -65,6 +65,46 @@ function fakeFetch(fail: Set<string> = new Set()) {
         { duration: 294, syncedLyrics: "[00:01.50] Hello, it's me\n[01:02.25] I was wondering" },
       ]);
     }
+    if (url.startsWith("https://ccmixter.org/api/query")) {
+      const p = new URL(url).searchParams;
+      const all = [
+        { upload_id: "501", upload_name: "Hello Remix", user_name: "djx", user_real_name: "DJ X",
+          upload_tags: ",media,remix,cczero,audio,mp3,hip_hop,", upload_date_format: "Sat, Jan 14, 2017 @ 2:25 PM",
+          files: [
+            { file_name: "djx_-_Hello_Remix.zip", download_url: "https://ccmixter.org/content/djx/stems.zip", file_format_info: { mime_type: "application/zip" } },
+            { file_name: "djx_-_Hello_Remix.mp3", download_url: "https://ccmixter.org/content/djx/Hello.mp3", file_rawsize: 4200000,
+              file_format_info: { mime_type: "audio/mpeg", ps: "3:30" } },
+          ] },
+        { upload_id: "502", upload_name: "Hello Vox", user_name: "singer", upload_tags: ",media,acappella,audio,mp3,",
+          files: [{ file_name: "vox.mp3", download_url: "https://ccmixter.org/content/singer/vox.mp3", file_format_info: { mime_type: "audio/mpeg", ps: "1:00" } }] },
+        { upload_id: "503", upload_name: "No Audio", user_name: "x", upload_tags: ",media,", files: [] },
+      ];
+      if (p.get("ids")) return j(all.filter((u) => u.upload_id === p.get("ids")));
+      assert(p.get("searchp") === "hello" && p.get("f") === "json", "ccMixter query");
+      return j(all);
+    }
+    if (url.startsWith("https://api.openverse.org/v1/audio/")) {
+      const u = new URL(url);
+      const all = [
+        { id: "ov-1", title: "Hello Morning", creator: "Commons Choir", url: "https://upload.wikimedia.org/a.ogg", duration: 125000,
+          filetype: "ogg", filesize: 900000, source: "wikimedia_audio", genres: ["folk"], mature: false,
+          thumbnail: "https://api.openverse.org/v1/audio/ov-1/thumb/" },
+        { id: "ov-2", title: "Hello Sunrise", creator: "Indie", url: "https://mp3d.jamendo/77", duration: 180000, source: "jamendo" },
+        { id: "ov-3", title: "No file", creator: "x", url: null, source: "freesound" },
+        { id: "ov-4", title: "Explicit", creator: "x", url: "https://x/y.mp3", source: "freesound", mature: true },
+      ];
+      if (u.pathname.endsWith("/thumb/")) return new Response(new Uint8Array([1]), { headers: { "content-type": "image/jpeg" } });
+      const one = u.pathname.match(/\/audio\/([^/]+)\/$/);
+      if (one) return j(all.find((r) => r.id === one[1]) ?? {});
+      assert(u.searchParams.get("category") === "music", "music only");
+      return j({ result_count: all.length, results: all });
+    }
+    if (url.startsWith("https://upload.wikimedia.org/")) {
+      return new Response(MP3, { headers: { "content-type": "audio/ogg", "content-length": String(MP3.length) } });
+    }
+    if (url.startsWith("https://ccmixter.org/content/")) {
+      return new Response(MP3, { headers: { "content-type": "audio/mpeg", "content-length": String(MP3.length), "accept-ranges": "bytes" } });
+    }
     if (url.startsWith("https://is1-ssl.mzstatic.com/")) {
       return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { headers: { "content-type": "image/jpeg" } });
     }
@@ -91,7 +131,7 @@ Deno.test("health lists enabled providers", async () => {
   fakeFetch();
   const r = await get("/api/health");
   const d = await r.json();
-  assert(r.status === 200 && d.providers.length === 4, JSON.stringify(d));
+  assert(r.status === 200 && d.providers.length === 6, JSON.stringify(d));
   assert(r.headers.get("access-control-allow-origin") === "*", "CORS");
 });
 
@@ -120,8 +160,9 @@ Deno.test("one provider outage does not break search", async () => {
 });
 
 Deno.test("every provider down is a 502", async () => {
-  fakeFetch(new Set(["itunes.apple.com", "api.jamendo.com", "api.audius.co", "archive.org"]));
-  assert((await get("/api/search?q=hello")).status === 502, "502");
+  fakeFetch(new Set(["itunes.apple.com", "api.jamendo.com", "api.audius.co", "archive.org", "ccmixter.org", "api.openverse.org"]));
+  // A query no earlier test ran, so Openverse's memo can't answer it.
+  assert((await get("/api/search?q=nothing%20cached")).status === 502, "502");
 });
 
 Deno.test("download streams bytes and resumes with Range", async () => {
@@ -178,7 +219,7 @@ Deno.test("sources lists each enabled provider with its capabilities", async () 
   fakeFetch();
   const d = await (await get("/api/sources")).json();
   const ids = d.sources.map((x: any) => x.id);
-  assert(JSON.stringify(ids) === JSON.stringify(["jm", "au", "ia", "it"]), JSON.stringify(ids));
+  assert(JSON.stringify(ids) === JSON.stringify(["jm", "au", "cc", "ov", "ia", "it"]), JSON.stringify(ids));
   const it = d.sources.find((x: any) => x.id === "it");
   assert(it.name === "Apple Music" && it.preview && !it.download && it.lyrics, JSON.stringify(it));
 });
@@ -188,7 +229,7 @@ Deno.test("search can be limited to one provider", async () => {
   calls.length = 0;
   const d = await (await get("/api/search?q=hello&provider=it")).json();
   assert(d.results.length === 1 && d.results[0].id === "it:11", JSON.stringify(d));
-  assert(!calls.some((u) => u.includes("jamendo") || u.includes("audius") || u.includes("archive")), "only iTunes queried");
+  assert(!calls.some((u) => /jamendo|audius|archive|ccmixter|openverse/.test(u)), "only iTunes queried");
   assert((await get("/api/search?q=hello&provider=zz")).status === 404, "unknown provider");
 });
 
@@ -209,4 +250,53 @@ Deno.test("art proxy only serves provider image hosts", async () => {
     const r = await get("/api/art?u=" + encodeURIComponent(bad));
     assert(r.status === 403 || r.status === 400, `${bad} -> ${r.status}`);
   }
+});
+
+Deno.test("ccMixter: first MP3 of each upload, a cappellas skipped", async () => {
+  fakeFetch();
+  const d = await (await get("/api/search?q=hello&provider=cc")).json();
+  assert(d.results.length === 1, JSON.stringify(d));
+  const t = d.results[0];
+  assert(t.id === "cc:501" && t.artist === "DJ X" && t.durationMs === 210000 && t.download && t.sizeBytes === 4200000, JSON.stringify(t));
+  assert(t.genre === "hip hop" && t.year === 2017, JSON.stringify(t));
+  const dl = await get("/api/download/cc%3A501");
+  assert(dl.status === 200 && (await dl.arrayBuffer()).byteLength === 1000, "ccMixter download");
+  assert(calls.includes("https://ccmixter.org/content/djx/Hello.mp3"), "downloads the MP3, not the stems zip");
+});
+
+Deno.test("Openverse: music with files only, no duplicates of other sources, cached", async () => {
+  fakeFetch();
+  calls.length = 0;
+  const d = await (await get("/api/search?q=Hello%20Openverse&provider=ov")).json();
+  assert(d.results.length === 1, JSON.stringify(d));
+  const t = d.results[0];
+  assert(t.id === "ov:ov-1" && t.durationMs === 125000 && t.format === "OGG" && t.download && t.genre === "folk", JSON.stringify(t));
+  assert(t.artworkUrl === "https://api.openverse.org/v1/audio/ov-1/thumb/", "thumbnail");
+  await get("/api/search?q=hello%20openverse&provider=ov");
+  assert(calls.filter((u) => u.includes("api.openverse.org/v1/audio/?")).length === 1, "second search served from memo");
+  const dl = await get("/api/download/ov%3Aov-1");
+  assert(dl.status === 200 && dl.headers.get("content-type") === "audio/ogg", String(dl.status));
+  const art = await get("/api/art?u=" + encodeURIComponent("https://api.openverse.org/v1/audio/ov-1/thumb/"));
+  assert(art.status === 200, `openverse thumbnails allowed: ${art.status}`);
+});
+
+Deno.test("Openverse uses client credentials when configured", async () => {
+  fakeFetch();
+  const base = globalThis.fetch;
+  let auth = "";
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith("/auth_tokens/token/")) {
+      assert(init?.method === "POST" && String(init.body).includes("grant_type=client_credentials"), "token request");
+      return new Response(JSON.stringify({ access_token: "tok", expires_in: 3600 }));
+    }
+    if (url.includes("api.openverse.org/v1/audio/")) auth = new Headers(init?.headers).get("authorization") ?? "";
+    return base(input, init);
+  }) as typeof fetch;
+  Deno.env.set("OPENVERSE_CLIENT_ID", "id");
+  Deno.env.set("OPENVERSE_CLIENT_SECRET", "secret");
+  await get("/api/search?q=credentials&provider=ov");
+  Deno.env.delete("OPENVERSE_CLIENT_ID");
+  Deno.env.delete("OPENVERSE_CLIENT_SECRET");
+  assert(auth === "Bearer tok", auth);
 });

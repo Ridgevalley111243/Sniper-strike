@@ -289,11 +289,163 @@ export const audius: Provider = {
   },
 };
 
+// ---------------------------------------------------------------- ccMixter
+// Creative Commons remixes and originals; every upload's licence allows
+// sharing, so the MP3 is downloadable. A cappellas and samples are skipped.
+const CCMIXTER = "https://ccmixter.org/api/query";
+const ccSkip = /,(acappella|sample|sample_pack|stems?),/;
+
+function ccMp3(u: any) {
+  const files: any[] = u.files ?? [];
+  return files.find((f) => f.file_format_info?.mime_type === "audio/mpeg" && f.download_url) ??
+    files.find((f) => /\.mp3$/i.test(f.file_name ?? "") && f.download_url);
+}
+
+function ccTrack(u: any): Track | null {
+  const f = ccMp3(u);
+  if (!f || ccSkip.test(u.upload_tags ?? "")) return null;
+  const tags = String(u.upload_tags ?? "").split(",");
+  return {
+    id: `cc:${u.upload_id}`,
+    title: u.upload_name,
+    artist: u.user_real_name || u.user_name || "",
+    album: "",
+    durationMs: Math.round(iaSeconds(f.file_format_info?.ps) * 1000),
+    genre: tags.find((t) => ["hip_hop", "electronic", "pop", "rock", "ambient", "jazz", "funk", "reggae", "soul", "blues", "folk", "classical", "experimental"].includes(t))?.replace("_", " "),
+    year: year(String(u.upload_date ?? "")) ?? year(String(u.upload_date_format ?? "").split(", ")[2]),
+    artworkSeed: `cc:${u.upload_id}`,
+    provider: "ccMixter",
+    preview: true,
+    download: true,
+    lyrics: false,
+    format: "MP3",
+    sizeBytes: f.file_rawsize ? Number(f.file_rawsize) : undefined,
+  };
+}
+
+export const ccmixter: Provider = {
+  prefix: "cc",
+  name: "ccMixter",
+  description: "Creative Commons remixes and originals",
+  can: { preview: true, download: true, lyrics: false },
+  enabled: () => Deno.env.get("CCMIXTER_DISABLED") !== "1",
+  async search(q) {
+    const d = await getJson(`${CCMIXTER}?f=json&lic=all&sort=rank&limit=15&searchp=${encodeURIComponent(q)}`);
+    return (Array.isArray(d) ? d : []).map(ccTrack).filter((t): t is Track => t !== null);
+  },
+  async info(id) {
+    const d = await getJson(`${CCMIXTER}?f=json&ids=${encodeURIComponent(id)}`);
+    const u = Array.isArray(d) ? d[0] : null;
+    const f = u && ccMp3(u);
+    if (!f) return null;
+    return {
+      title: u.upload_name,
+      artist: u.user_real_name || u.user_name || "",
+      album: "",
+      durationSec: iaSeconds(f.file_format_info?.ps),
+      previewUrl: f.download_url,
+      downloadUrl: f.download_url,
+    };
+  },
+};
+
+// --------------------------------------------------------------- Openverse
+// Openly licensed music gathered from many collections (Wikimedia Commons,
+// Freesound and more). Every item carries a CC licence or public-domain mark,
+// so the file is downloadable. Anonymous use is rate limited per IP; set
+// OPENVERSE_CLIENT_ID / OPENVERSE_CLIENT_SECRET for the higher limits.
+const OPENVERSE = "https://api.openverse.org/v1";
+let ovToken: { value: string; expires: number } | null = null;
+
+async function ovHeaders(): Promise<Record<string, string>> {
+  const id = Deno.env.get("OPENVERSE_CLIENT_ID"), secret = Deno.env.get("OPENVERSE_CLIENT_SECRET");
+  if (!id || !secret) return {};
+  if (!ovToken || ovToken.expires < Date.now() + 60_000) {
+    const r = await fetch(`${OPENVERSE}/auth_tokens/token/`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": UA },
+      body: new URLSearchParams({ grant_type: "client_credentials", client_id: id, client_secret: secret }),
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!r.ok) return {}; // fall back to anonymous access
+    const t = await r.json();
+    ovToken = { value: t.access_token, expires: Date.now() + (t.expires_in ?? 3600) * 1000 };
+  }
+  return { authorization: `Bearer ${ovToken.value}` };
+}
+
+// Sources that already have their own TRUHive source.
+const OV_SKIP = new Set(["jamendo", "ccmixter"]);
+
+function ovTrack(r: any): Track | null {
+  if (!r.url || r.mature) return null;
+  return {
+    id: `ov:${r.id}`,
+    title: r.title || "Untitled",
+    artist: r.creator || "Unknown artist",
+    album: r.audio_set?.title ?? "",
+    durationMs: typeof r.duration === "number" ? r.duration : 0,
+    genre: r.genres?.[0],
+    artworkSeed: `ov:${r.id}`,
+    provider: "Openverse",
+    preview: true,
+    download: true,
+    lyrics: false,
+    format: r.filetype ? String(r.filetype).toUpperCase() : undefined,
+    sizeBytes: r.filesize ? Number(r.filesize) : undefined,
+    artworkUrl: r.thumbnail || undefined,
+  };
+}
+
+export const openverse: Provider = {
+  prefix: "ov",
+  name: "Openverse",
+  description: "Openly licensed music from Wikimedia Commons, Freesound and more",
+  can: { preview: true, download: true, lyrics: false },
+  enabled: () => Deno.env.get("OPENVERSE_DISABLED") !== "1",
+  search: (q) =>
+    cached(`ov|${q.toLowerCase().trim()}`, async () => {
+      const d = await getJson(
+        `${OPENVERSE}/audio/?category=music&page_size=20&q=${encodeURIComponent(q)}`,
+        6000,
+        await ovHeaders(),
+      );
+      return (d.results ?? [])
+        .filter((r: any) => !OV_SKIP.has(r.source))
+        .map(ovTrack)
+        .filter((t: Track | null): t is Track => t !== null);
+    }),
+  async info(id) {
+    const r = await getJson(`${OPENVERSE}/audio/${encodeURIComponent(id)}/`, 6000, await ovHeaders());
+    if (!r?.url) return null;
+    return {
+      title: r.title || "Untitled",
+      artist: r.creator || "",
+      album: r.audio_set?.title ?? "",
+      durationSec: typeof r.duration === "number" ? r.duration / 1000 : 0,
+      previewUrl: r.url,
+      downloadUrl: r.url,
+    };
+  },
+};
+
+// A small per-instance memo so repeated searches don't spend rate-limited
+// quota. It only holds search results (public catalogue data) for minutes.
+const memo = new Map<string, { at: number; value: Track[] }>();
+async function cached(key: string, fn: () => Promise<Track[]>, ttlMs = 10 * 60_000): Promise<Track[]> {
+  const hit = memo.get(key);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.value;
+  const value = await fn();
+  if (memo.size > 200) memo.delete(memo.keys().next().value!);
+  memo.set(key, { at: Date.now(), value });
+  return value;
+}
+
 // Order is the order the app lists them: download-capable sources first.
-export const PROVIDERS: Provider[] = [jamendo, audius, archive, itunes];
+export const PROVIDERS: Provider[] = [jamendo, audius, ccmixter, openverse, archive, itunes];
 
 /** Image hosts /api/art will fetch from, so it can't be used as an open proxy. */
-const ART_HOSTS = ["mzstatic.com", "jamendo.com", "archive.org", "audius.co"];
+const ART_HOSTS = ["mzstatic.com", "jamendo.com", "archive.org", "audius.co", "openverse.org"];
 export const artAllowed = (u: URL) =>
   u.protocol === "https:" && ART_HOSTS.some((h) => u.hostname === h || u.hostname.endsWith(`.${h}`));
 
