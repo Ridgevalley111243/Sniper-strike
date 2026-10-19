@@ -6,7 +6,16 @@
 //
 // Stateless by design: no database, no storage. Audio is streamed from the
 // provider to the user's device and never kept here.
-import { artAllowed, lrclib, plainLines, PROVIDERS, resolve, type Track } from "./providers.ts";
+import {
+  artAllowed,
+  artSignatureValid,
+  lrclib,
+  plainLines,
+  PROVIDERS,
+  resolve,
+  signArt,
+  type Track,
+} from "./providers.ts";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -33,6 +42,9 @@ async function search(q: string, only: string | null): Promise<Response> {
     else errors.push(`${active[i].name}: ${s.reason}`);
   });
   if (errors.length) console.warn("search provider errors", errors);
+  await Promise.all(results.map(async (t) => {
+    if (t.artworkUrl) t.artworkSig = await signArt(t.artworkUrl);
+  }));
   // Only fail when every provider failed, so one outage never breaks search.
   if (results.length === 0 && errors.length === active.length) return json({ error: "providers unavailable" }, 502);
   return json({ results }, 200, { "cache-control": "public, max-age=300" });
@@ -66,18 +78,24 @@ async function audio(id: string, kind: "preview" | "stream" | "download", req: R
   return new Response(up.body, { status: up.status, headers: out });
 }
 
-/** Cover images, re-served with CORS so the web app can draw them. */
-async function art(raw: string | null): Promise<Response> {
+const ART_MAX_BYTES = 5_000_000;
+
+/** Cover images, re-served with CORS so the web app can draw them. Only
+ *  URLs this backend issued (signed) or provider image hosts are fetched. */
+async function art(raw: string | null, sig: string | null): Promise<Response> {
   let u: URL;
   try {
     u = new URL(raw ?? "");
   } catch {
     return json({ error: "bad url" }, 400);
   }
-  if (!artAllowed(u)) return json({ error: "host not allowed" }, 403);
+  if (u.protocol !== "https:" || !(artAllowed(u) || await artSignatureValid(raw!, sig))) {
+    return json({ error: "host not allowed" }, 403);
+  }
   const up = await fetch(u, { headers: { "user-agent": "TRUHive/1.0" }, signal: AbortSignal.timeout(8000) });
   const type = up.headers.get("content-type") ?? "";
-  if (!up.ok || !type.startsWith("image/")) return json({ error: `image HTTP ${up.status}` }, 502);
+  const size = Number(up.headers.get("content-length") ?? 0);
+  if (!up.ok || !type.startsWith("image/") || size > ART_MAX_BYTES) return json({ error: `image HTTP ${up.status}` }, 502);
   const out = new Headers(CORS);
   out.set("content-type", type);
   out.set("cache-control", "public, max-age=604800, immutable");
@@ -123,7 +141,7 @@ export async function handle(req: Request): Promise<Response> {
       case "search":
         return await search(url.searchParams.get("q") ?? "", url.searchParams.get("provider"));
       case "art":
-        return await art(url.searchParams.get("u"));
+        return await art(url.searchParams.get("u"), url.searchParams.get("s"));
       case "preview":
       case "stream":
       case "download":

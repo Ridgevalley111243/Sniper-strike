@@ -20,7 +20,9 @@ class MusicSearchController extends ChangeNotifier {
   MusicSearchController(this._sources);
 
   final SourceManager _sources;
-  static const _timeout = Duration(seconds: 8);
+  // Generous enough for a slow provider behind the backend (it gives up on
+  // Openverse after 7.5 s), short enough that a dead source is reported.
+  static const _timeout = Duration(seconds: 10);
   static const _cacheTtl = Duration(minutes: 5);
 
   String query = '';

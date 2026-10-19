@@ -196,7 +196,7 @@ void main() {
           asked = req.url;
           return http.Response(
             '{"results":[{"id":"it:1","title":"Hello","artist":"Adele","durationMs":295000,'
-            '"preview":true,"artworkUrl":"https://is1-ssl.mzstatic.com/a/600x600bb.jpg"}]}',
+            '"preview":true,"artworkUrl":"https://is1-ssl.mzstatic.com/a/600x600bb.jpg","artworkSig":"abc123"}]}',
             200,
           );
         }),
@@ -209,6 +209,7 @@ void main() {
       final art = Uri.parse(hits.single.artSeed);
       expect(art.path, '/fn/api/art');
       expect(art.queryParameters['u'], 'https://is1-ssl.mzstatic.com/a/600x600bb.jpg');
+      expect(art.queryParameters['s'], 'abc123');
       expect(hits.single.sourceId, 'backend.it');
     });
   });

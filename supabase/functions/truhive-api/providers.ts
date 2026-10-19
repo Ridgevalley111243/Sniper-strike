@@ -23,6 +23,8 @@ export type Track = {
   sizeBytes?: number;
   /** Cover image on the provider's CDN; the app loads it through /api/art. */
   artworkUrl?: string;
+  /** Signature that lets /api/art fetch [artworkUrl] from any host. */
+  artworkSig?: string;
 };
 
 /** What the audio and lyrics routes need to serve one track. */
@@ -370,6 +372,13 @@ export const ccmixter: Provider = {
 const OPENVERSE = "https://api.openverse.org/v1";
 let ovToken: { value: string; expires: number } | null = null;
 
+// Openverse can be slow to answer anonymous requests from cloud servers.
+// After a timeout, skip it briefly so searches don't keep waiting on it.
+const OV_TIMEOUT_MS = 7500;
+const OV_COOLDOWN_MS = 2 * 60_000;
+let ovPausedUntil = 0;
+export const resetOpenverseCooldown = () => (ovPausedUntil = 0);
+
 async function ovHeaders(): Promise<Record<string, string>> {
   const id = Deno.env.get("OPENVERSE_CLIENT_ID"), secret = Deno.env.get("OPENVERSE_CLIENT_SECRET");
   if (!id || !secret) return {};
@@ -419,11 +428,18 @@ export const openverse: Provider = {
   enabled: () => Deno.env.get("OPENVERSE_DISABLED") !== "1",
   search: (q) =>
     cached(`ov|${q.toLowerCase().trim()}`, async () => {
-      const d = await getJson(
-        `${OPENVERSE}/audio/?category=music&page_size=20&q=${encodeURIComponent(q)}`,
-        6000,
-        await ovHeaders(),
-      );
+      if (Date.now() < ovPausedUntil) throw new Error("Openverse paused after a timeout");
+      let d;
+      try {
+        d = await getJson(
+          `${OPENVERSE}/audio/?category=music&page_size=20&q=${encodeURIComponent(q)}`,
+          OV_TIMEOUT_MS,
+          await ovHeaders(),
+        );
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "TimeoutError") ovPausedUntil = Date.now() + OV_COOLDOWN_MS;
+        throw e;
+      }
       return (d.results ?? [])
         .filter((r: any) => !OV_SKIP.has(r.source))
         .map(ovTrack)
@@ -459,10 +475,38 @@ async function cached(key: string, fn: () => Promise<Track[]>, ttlMs = 10 * 60_0
 // Order is the order the app lists them: download-capable sources first.
 export const PROVIDERS: Provider[] = [jamendo, audius, ccmixter, openverse, archive, itunes];
 
-/** Image hosts /api/art will fetch from, so it can't be used as an open proxy. */
+/** Image hosts /api/art fetches from without a signature (older app versions). */
 const ART_HOSTS = ["mzstatic.com", "jamendo.com", "archive.org", "audius.co", "openverse.org"];
 export const artAllowed = (u: URL) =>
   u.protocol === "https:" && ART_HOSTS.some((h) => u.hostname === h || u.hostname.endsWith(`.${h}`));
+
+// Cover art URLs this backend hands out are signed, so /api/art can fetch
+// them from any host (Audius serves covers from many independent nodes)
+// without becoming an open proxy: only URLs we issued carry a valid
+// signature. The key is the project's service-role key, which Supabase
+// provides to every function and which never leaves the server.
+const artKey = () => Deno.env.get("ART_SIGNING_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+let artCryptoKey: { raw: string; key: CryptoKey } | null = null;
+
+export async function signArt(url: string): Promise<string | undefined> {
+  const raw = artKey();
+  if (!raw) return undefined;
+  if (artCryptoKey?.raw !== raw) {
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(raw), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    artCryptoKey = { raw, key };
+  }
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", artCryptoKey.key, new TextEncoder().encode(url)));
+  return Array.from(mac.slice(0, 16), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function artSignatureValid(url: string, sig: string | null): Promise<boolean> {
+  if (!sig) return false;
+  const expected = await signArt(url);
+  if (!expected || expected.length !== sig.length) return false;
+  let diff = 0;
+  for (let i = 0; i < sig.length; i++) diff |= sig.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
 
 /** Splits "jm:123" into its provider and that provider's own track id. */
 export function resolve(id: string): [Provider, string] | null {

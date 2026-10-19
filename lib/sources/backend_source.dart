@@ -131,9 +131,11 @@ class BackendSource extends MusicSource {
           album: (j['album'] as String?) ?? '',
           duration: Duration(milliseconds: (j['durationMs'] as num?)?.toInt() ?? 0),
           // A cover image URL doubles as the art seed (see Artwork); images go
-          // through the backend so the web app may draw them.
+          // through the backend so the web app may draw them. The signature
+          // lets it fetch covers from any host it vouched for.
           artSeed: j['artworkUrl'] is String
-              ? _u('/api/art', {'u': j['artworkUrl'] as String}).toString()
+              ? _u('/api/art', {'u': j['artworkUrl'] as String, if (j['artworkSig'] is String) 's': j['artworkSig'] as String})
+                  .toString()
               : (j['artworkSeed'] as String?) ?? (j['id'] as String),
           genre: j['genre'] as String?,
           year: (j['year'] as num?)?.toInt(),
