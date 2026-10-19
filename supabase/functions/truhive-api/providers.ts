@@ -19,6 +19,8 @@ export type Track = {
   lyrics: boolean;
   format?: string;
   sizeBytes?: number;
+  /** Cover image on the provider's CDN; the app loads it through /api/art. */
+  artworkUrl?: string;
 };
 
 /** What the audio and lyrics routes need to serve one track. */
@@ -35,6 +37,9 @@ export type TrackInfo = {
 export interface Provider {
   prefix: string;
   name: string;
+  description: string;
+  /** What this provider can ever do; each track still says what it allows. */
+  can: { preview: boolean; download: boolean; lyrics: boolean };
   enabled(): boolean;
   search(q: string): Promise<Track[]>;
   info(id: string): Promise<TrackInfo | null>;
@@ -58,7 +63,9 @@ const first = (v: unknown) => (Array.isArray(v) ? v[0] : v) as string | undefine
 // Search + 30-second previews of mainstream catalogue. Never downloadable.
 export const itunes: Provider = {
   prefix: "it",
-  name: "Apple Music previews",
+  name: "Apple Music",
+  description: "Mainstream catalogue · 30-second previews",
+  can: { preview: true, download: false, lyrics: true },
   enabled: () => true,
   async search(q) {
     const d = await getJson(
@@ -75,11 +82,12 @@ export const itunes: Provider = {
         genre: r.primaryGenreName,
         year: year(r.releaseDate),
         artworkSeed: `it:${r.collectionId ?? r.trackId}`,
-        provider: "Apple Music (preview)",
+        provider: "Apple Music",
         preview: true,
         download: false,
         lyrics: true,
         format: "AAC",
+        artworkUrl: r.artworkUrl100?.replace(/\/\d+x\d+bb\./, "/600x600bb."),
       }));
   },
   async info(id) {
@@ -114,6 +122,8 @@ const iaMp3s = (files: any[]) =>
 export const archive: Provider = {
   prefix: "ia",
   name: "Internet Archive",
+  description: "Public domain, Creative Commons and live concert recordings",
+  can: { preview: true, download: true, lyrics: false },
   enabled: () => true,
   async search(q) {
     const query = `(${q.replace(/[()]/g, " ")}) AND ${IA_FILTER}`;
@@ -146,6 +156,7 @@ export const archive: Provider = {
           lyrics: false,
           format: "MP3",
           sizeBytes: f.size ? parseInt(f.size, 10) : undefined,
+          artworkUrl: `https://archive.org/services/img/${encodeURIComponent(doc.identifier)}`,
         });
       }
     });
@@ -183,6 +194,8 @@ const jamendoTracks = (params: string) =>
 export const jamendo: Provider = {
   prefix: "jm",
   name: "Jamendo",
+  description: "Independent artists · Creative Commons",
+  can: { preview: true, download: true, lyrics: true },
   enabled: () => jamendoId() !== "",
   async search(q) {
     const d = await jamendoTracks(`limit=15&search=${encodeURIComponent(q)}`);
@@ -202,6 +215,7 @@ export const jamendo: Provider = {
         download: r.audiodownload_allowed === true && !!r.audiodownload,
         lyrics,
         format: "MP3",
+        artworkUrl: r.album_image || r.image || undefined,
       };
     });
   },
@@ -234,6 +248,8 @@ const audiusDownloadable = (r: any) => r.is_downloadable === true && !r.download
 export const audius: Provider = {
   prefix: "au",
   name: "Audius",
+  description: "Independent artists · hip-hop, electronic, Afrobeats",
+  can: { preview: true, download: true, lyrics: false },
   enabled: () => Deno.env.get("AUDIUS_DISABLED") !== "1",
   async search(q) {
     const d = await getJson(`${AUDIUS}/tracks/search?query=${encodeURIComponent(q)}&${audiusQs()}`);
@@ -254,6 +270,7 @@ export const audius: Provider = {
         download: audiusDownloadable(r),
         lyrics: false,
         format: "MP3",
+        artworkUrl: r.artwork?.["480x480"] || r.artwork?.["150x150"] || undefined,
       }));
   },
   async info(id) {
@@ -272,7 +289,13 @@ export const audius: Provider = {
   },
 };
 
-export const PROVIDERS: Provider[] = [itunes, jamendo, audius, archive];
+// Order is the order the app lists them: download-capable sources first.
+export const PROVIDERS: Provider[] = [jamendo, audius, archive, itunes];
+
+/** Image hosts /api/art will fetch from, so it can't be used as an open proxy. */
+const ART_HOSTS = ["mzstatic.com", "jamendo.com", "archive.org", "audius.co"];
+export const artAllowed = (u: URL) =>
+  u.protocol === "https:" && ART_HOSTS.some((h) => u.hostname === h || u.hostname.endsWith(`.${h}`));
 
 /** Splits "jm:123" into its provider and that provider's own track id. */
 export function resolve(id: string): [Provider, string] | null {

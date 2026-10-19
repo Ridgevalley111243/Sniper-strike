@@ -7,6 +7,10 @@ import '../../core/util/format.dart';
 
 /// Deterministic album artwork in the TRUHive palette (the "Artwork" component
 /// set in Figma). The same seed always produces the same cover.
+///
+/// When the seed is an image URL (real cover art from a provider), the image
+/// is drawn over the generated cover, which remains as placeholder and as the
+/// fallback when offline.
 class Artwork extends StatelessWidget {
   const Artwork({super.key, required this.seed, this.size = 52, this.radius, this.shadow});
 
@@ -21,16 +25,35 @@ class Artwork extends StatelessWidget {
     final style = h % 6;
     final r = radius ?? (size * 0.22).clamp(8.0, 36.0);
     final Widget art = style == 3
-        ? Image.asset('assets/images/headphones.jpg', fit: BoxFit.cover, width: size, height: size,
-            cacheWidth: (size * 2).round())
+        ? Image.asset('assets/images/headphones.jpg', fit: BoxFit.cover, width: size, height: size, cacheWidth: (size * 2).round())
         : CustomPaint(painter: _ArtPainter(h, style), size: Size.square(size));
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(r), boxShadow: shadow),
-      child: ClipRRect(borderRadius: BorderRadius.circular(r), child: ExcludeSemantics(child: art)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(r),
+        child: ExcludeSemantics(child: isImageUrl(seed) ? _withCover(context, art) : art),
+      ),
     );
   }
+
+  static bool isImageUrl(String seed) => seed.startsWith('https://') || seed.startsWith('http://');
+
+  Widget _withCover(BuildContext context, Widget placeholder) => Stack(
+    fit: StackFit.expand,
+    children: [
+      placeholder,
+      Image.network(
+        seed,
+        fit: BoxFit.cover,
+        cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+        frameBuilder: (_, child, frame, sync) =>
+            sync ? child : AnimatedOpacity(opacity: frame == null ? 0 : 1, duration: Motion.fast, child: child),
+      ),
+    ],
+  );
 }
 
 class _ArtPainter extends CustomPainter {
@@ -47,8 +70,12 @@ class _ArtPainter extends CustomPainter {
       center,
       rad,
       Paint()
-        ..shader = RadialGradient(colors: [col.withValues(alpha: a), col.withValues(alpha: 0)])
-            .createShader(Rect.fromCircle(center: center, radius: rad)),
+        ..shader = RadialGradient(
+          colors: [
+            col.withValues(alpha: a),
+            col.withValues(alpha: 0),
+          ],
+        ).createShader(Rect.fromCircle(center: center, radius: rad)),
     );
   }
 
@@ -68,15 +95,22 @@ class _ArtPainter extends CustomPainter {
         _blob(c, s, j(0.45), j(0.95), 0.35, AppColors.navy, 0.7);
       case 2: // Pulse
         final grad = Paint()
-          ..shader = const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.blue, AppColors.navy])
-              .createShader(Offset.zero & s);
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.blue, AppColors.navy],
+          ).createShader(Offset.zero & s);
         c.drawRect(Offset.zero & s, grad);
         final center = Offset(s.width * j(0.5), s.height * j(0.5));
         for (final (r, a) in [(0.38, 0.25), (0.27, 0.4), (0.16, 0.6)]) {
-          c.drawCircle(center, s.width * r, Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(1, s.width / 110)
-            ..color = AppColors.lightBlue.withValues(alpha: a));
+          c.drawCircle(
+            center,
+            s.width * r,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(1, s.width / 110)
+              ..color = AppColors.lightBlue.withValues(alpha: a),
+          );
         }
         c.drawCircle(center, s.width * 0.055, Paint()..color = AppColors.offWhite);
       case 4: // Dusk

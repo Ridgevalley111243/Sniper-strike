@@ -114,8 +114,11 @@ real providers in parallel and streams their audio to the device.
 It is **stateless**: no database tables, no Storage. Songs pass through to the user's device and are
 never kept on the server; nothing about users is recorded.
 
-The CI and Pages builds bundle its URL (`--dart-define=TRUHIVE_BACKEND_URL=…`), so fresh installs
-start on real sources; the demo sources stay available in **Manage Sources**.
+The CI and Pages builds bundle its URL (`--dart-define=TRUHIVE_BACKEND_URL=…`). The app lists each
+provider the backend reports (`GET /api/sources`) as its own source — with its own switch, health and
+capabilities — and remembers the list for offline starts. Real cover art is loaded through
+`GET /api/art`, which only fetches from the providers' image hosts. Without a backend, the app falls
+back to the offline demo sources.
 
 ```bash
 supabase functions deploy truhive-api --no-verify-jwt     # public API, no sign-in
@@ -133,7 +136,9 @@ backend that holds the keys and proxies the providers, then add its URL in
 | Endpoint | Response |
 | --- | --- |
 | `GET /api/health` | `200` when reachable |
-| `GET /api/search?q=…` | `{"results":[{"id","title","artist","album","durationMs","genre","year","artworkSeed","provider","preview":bool,"download":bool,"lyrics":bool,"format","sizeBytes"}]}` |
+| `GET /api/sources` | `{"sources":[{"id","name","description","preview":bool,"download":bool,"lyrics":bool}]}` — optional; one app source per entry |
+| `GET /api/search?q=…[&provider=id]` | `{"results":[{"id","title","artist","album","durationMs","genre","year","artworkSeed","artworkUrl","provider","preview":bool,"download":bool,"lyrics":bool,"format","sizeBytes"}]}` |
+| `GET /api/art?u=…` | the cover image at `artworkUrl`, served with CORS |
 | `GET /api/preview/:id` | audio bytes (≈30 s clip) |
 | `GET /api/download/:id` | audio bytes; honour `Range: bytes=N-` with `206` + `Accept-Ranges: bytes` for resumable downloads |
 | `GET /api/lyrics/:id` | `{"provider","synced":bool,"lines":[{"timeMs","text"}]}` |

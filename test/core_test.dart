@@ -1,11 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truhive/audio/synth.dart';
 import 'package:truhive/core/models/models.dart';
 import 'package:truhive/core/util/format.dart';
 import 'package:truhive/services/search_controller.dart';
+import 'package:truhive/sources/backend_source.dart';
 import 'package:truhive/sources/demo/demo_source.dart';
 import 'package:truhive/sources/music_source.dart';
 import 'package:truhive/sources/source_manager.dart';
@@ -138,17 +141,70 @@ void main() {
   });
 
   group('source manager', () {
-    test('a backend connected later starts enabled; disconnecting sticks', () async {
+    final backend = MockClient((req) async {
+      if (req.url.path.endsWith('/api/sources')) {
+        return http.Response(
+          '{"sources":[{"id":"jm","name":"Jamendo","download":true,"lyrics":true},'
+          '{"id":"it","name":"Apple Music","download":false,"lyrics":true}]}',
+          200,
+        );
+      }
+      return http.Response('{}', 404);
+    });
+
+    test('a backend replaces the demo sources with one source per provider', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
-      SourceManager(prefs); // first launch: demo sources only
+      expect(SourceManager(prefs).isEnabled('openwave'), isTrue); // no backend: demos
       await prefs.setString('sources.backendUrl', 'https://example.test/fn');
-      final sm = SourceManager(prefs); // relaunch with a backend
-      expect(sm.isEnabled('backend'), isTrue);
-      expect(sm.isEnabled('openwave'), isTrue);
+      final sm = SourceManager(prefs, client: backend);
+      // Until the backend answers, the built-in provider list is used.
+      expect(sm.all.map((s) => s.id), containsAll(['backend.jm', 'backend.au', 'backend.ia', 'backend.it']));
+      expect(sm.all.any((s) => s.isDemo), isFalse);
+      expect(sm.enabled.length, 4);
+      await sm.refreshProviders();
+      expect(sm.all.map((s) => s.id), ['backend.jm', 'backend.it']);
+      expect(sm.byId('backend.it')!.capabilities.download, isFalse);
+      expect(sm.byId('backend.jm')!.name, 'Jamendo');
+      // Songs saved before the split still find a source.
+      expect(sm.byId('backend'), isA<BackendSource>());
+      // The fetched list is remembered for offline starts.
+      expect(SourceManager(prefs).all.map((s) => s.id), ['backend.jm', 'backend.it']);
+    });
+
+    test('disconnecting a bundled backend sticks and brings the demos back', () async {
+      SharedPreferences.setMockInitialValues({'sources.backendUrl': 'https://example.test/fn'});
+      final prefs = await SharedPreferences.getInstance();
+      final sm = SourceManager(prefs, client: backend);
       await sm.setBackendUrl('');
       expect(SourceManager(prefs).backendUrl, isNull);
-      expect(SourceManager(prefs).byId('backend'), isNull);
+      expect(SourceManager(prefs).byId('backend.jm'), isNull);
+      expect(SourceManager(prefs).isEnabled('openwave'), isTrue);
+    });
+
+    test('provider search asks for that provider and loads covers through the backend', () async {
+      late Uri asked;
+      final src = BackendSource(
+        'https://example.test/fn/',
+        provider: const BackendProvider(id: 'it', name: 'Apple Music', lyrics: true),
+        client: MockClient((req) async {
+          asked = req.url;
+          return http.Response(
+            '{"results":[{"id":"it:1","title":"Hello","artist":"Adele","durationMs":295000,'
+            '"preview":true,"artworkUrl":"https://is1-ssl.mzstatic.com/a/600x600bb.jpg"}]}',
+            200,
+          );
+        }),
+      );
+      final hits = await src.search('hello');
+      expect(asked.path, '/fn/api/search');
+      expect(asked.queryParameters, {'q': 'hello', 'provider': 'it'});
+      expect(src.id, 'backend.it');
+      expect(src.monogram, 'AM');
+      final art = Uri.parse(hits.single.artSeed);
+      expect(art.path, '/fn/api/art');
+      expect(art.queryParameters['u'], 'https://is1-ssl.mzstatic.com/a/600x600bb.jpg');
+      expect(hits.single.sourceId, 'backend.it');
     });
   });
 }

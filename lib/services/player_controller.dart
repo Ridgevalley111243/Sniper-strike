@@ -14,6 +14,10 @@ enum PlayerRepeat { off, all, one }
 /// The single source of truth for playback. The mini player, the full player,
 /// the desktop player bar, the queue and the lock-screen controls all read
 /// from this one controller.
+/// Real cover art (an image URL used as the art seed) for the lock screen and
+/// notification; generated covers have no URL to show there.
+Uri? _artUri(String seed) => seed.startsWith('https://') ? Uri.tryParse(seed) : null;
+
 class PlayerController extends ChangeNotifier {
   PlayerController(this._library, this._files, this._sources, {this.autoplayEnabled}) {
     _subs.addAll([
@@ -96,7 +100,7 @@ class PlayerController extends ChangeNotifier {
 
   Future<AudioSource> _sourceFor(Track t) async {
     final uri = await _files.playableUri(t.fileKey, t.mimeType);
-    return AudioSource.uri(uri, tag: MediaItem(id: t.id, title: t.title, artist: t.artist, album: t.album, duration: t.duration));
+    return AudioSource.uri(uri, tag: MediaItem(id: t.id, title: t.title, artist: t.artist, album: t.album, duration: t.duration, artUri: _artUri(t.artSeed)));
   }
 
   Future<void> playTracks(List<Track> tracks, {int start = 0, bool shuffle = false}) async {
@@ -146,7 +150,8 @@ class PlayerController extends ChangeNotifier {
       if (previewSource != src) return; // user started another preview meanwhile
       final uri = clip.uri ?? await _files.ephemeralUri('preview-${src.sourceId}-${src.sourceTrackId}.wav', clip.bytes!, clip.mimeType);
       await _player.setAudioSource(AudioSource.uri(uri,
-          tag: MediaItem(id: 'preview:${src.localId}', title: g.title, artist: '${g.artist} · Preview', duration: clip.length)));
+          tag: MediaItem(
+              id: 'preview:${src.localId}', title: g.title, artist: '${g.artist} · Preview', duration: clip.length, artUri: _artUri(g.artSeed))));
       await _player.setLoopMode(LoopMode.off);
       previewLoading = false;
       notifyListeners();
