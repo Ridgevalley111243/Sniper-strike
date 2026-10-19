@@ -11,14 +11,25 @@ import 'music_source.dart';
 class SourceManager extends ChangeNotifier {
   SourceManager(this._prefs) {
     _sources.addAll(buildDemoSources());
-    final url = _prefs.getString(_kBackend);
-    if (url != null && url.isNotEmpty) _sources.add(BackendSource(url));
+    final url = backendUrl;
+    if (url != null) _sources.add(BackendSource(url));
     final saved = _prefs.getStringList(_kEnabled);
-    _enabled = saved?.toSet() ?? {for (final s in _sources) s.id};
+    // With real providers available, a fresh install starts on them; the
+    // demo sources stay one switch away in Manage Sources.
+    _enabled = saved?.toSet() ?? (url != null ? {'backend'} : {for (final s in _sources) s.id});
+    // Sources added since the last launch (e.g. a newly bundled backend) start enabled.
+    final known = _prefs.getStringList(_kKnown);
+    if (known != null) _enabled.addAll(_sources.map((s) => s.id).where((id) => !known.contains(id)));
+    _prefs.setStringList(_kKnown, [for (final s in _sources) s.id]);
+    _prefs.setStringList(_kEnabled, _enabled.toList());
   }
 
   static const _kEnabled = 'sources.enabled';
   static const _kBackend = 'sources.backendUrl';
+  static const _kKnown = 'sources.known';
+
+  /// Backend bundled at build time: `--dart-define=TRUHIVE_BACKEND_URL=...`.
+  static const _defaultBackend = String.fromEnvironment('TRUHIVE_BACKEND_URL');
 
   final SharedPreferences _prefs;
   final List<MusicSource> _sources = [];
@@ -31,7 +42,11 @@ class SourceManager extends ChangeNotifier {
   bool isEnabled(String id) => _enabled.contains(id);
   SourceHealth health(String id) => _health[id] ?? SourceHealth.unknown;
   DateTime? checkedAt(String id) => _checkedAt[id];
-  String? get backendUrl => _prefs.getString(_kBackend);
+  /// The user's choice wins; an empty string means they disconnected it.
+  String? get backendUrl {
+    final url = _prefs.getString(_kBackend) ?? _defaultBackend;
+    return url.isEmpty ? null : url;
+  }
 
   MusicSource? byId(String id) {
     for (final s in _sources) {
@@ -69,7 +84,7 @@ class SourceManager extends ChangeNotifier {
     _sources.removeWhere((s) => s is BackendSource);
     final clean = url.trim();
     if (clean.isEmpty) {
-      await _prefs.remove(_kBackend);
+      await _prefs.setString(_kBackend, '');
     } else {
       await _prefs.setString(_kBackend, clean);
       _sources.add(BackendSource(clean));
