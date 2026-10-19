@@ -159,9 +159,9 @@ void main() {
       await prefs.setString('sources.backendUrl', 'https://example.test/fn');
       final sm = SourceManager(prefs, client: backend);
       // Until the backend answers, the built-in provider list is used.
-      expect(sm.all.map((s) => s.id), containsAll(['backend.jm', 'backend.au', 'backend.ia', 'backend.it']));
+      expect(sm.all.map((s) => s.id), ['backend.jm', 'backend.au', 'backend.cc', 'backend.ov', 'backend.ia', 'backend.it']);
       expect(sm.all.any((s) => s.isDemo), isFalse);
-      expect(sm.enabled.length, 4);
+      expect(sm.enabled.length, 6);
       await sm.refreshProviders();
       expect(sm.all.map((s) => s.id), ['backend.jm', 'backend.it']);
       expect(sm.byId('backend.it')!.capabilities.download, isFalse);

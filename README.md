@@ -110,6 +110,8 @@ real providers in parallel and streams their audio to the device.
 | Internet Archive (CC, public domain, Live Music Archive only) | ✓ | ✓ | ✓ | — |
 | Jamendo (needs `JAMENDO_CLIENT_ID`) | ✓ | ✓ | where the artist allows it | Jamendo / LRCLIB |
 | Audius | ✓ | ✓ | where the artist enabled it, ungated | — |
+| ccMixter (CC remixes and originals; a cappellas and samples skipped) | ✓ | ✓ | ✓ | — |
+| Openverse (CC music from Wikimedia Commons, Freesound and more) | ✓ | ✓ | ✓ | — |
 
 It is **stateless**: no database tables, no Storage. Songs pass through to the user's device and are
 never kept on the server; nothing about users is recorded.
@@ -124,6 +126,7 @@ back to the offline demo sources.
 supabase functions deploy truhive-api --no-verify-jwt     # public API, no sign-in
 supabase secrets set JAMENDO_CLIENT_ID=…                  # free at devportal.jamendo.com
 supabase secrets set AUDIUS_API_KEY=…                     # optional, higher rate limits
+supabase secrets set OPENVERSE_CLIENT_ID=… OPENVERSE_CLIENT_SECRET=…   # optional, higher rate limits
 deno test --allow-env supabase/functions/truhive-api       # offline tests with stubbed providers
 ```
 

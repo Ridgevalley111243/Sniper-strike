@@ -35,6 +35,13 @@ class SourceManager extends ChangeNotifier {
   static const _fallbackProviders = [
     BackendProvider(id: 'jm', name: 'Jamendo', description: 'Independent artists · Creative Commons', download: true, lyrics: true),
     BackendProvider(id: 'au', name: 'Audius', description: 'Independent artists · hip-hop, electronic, Afrobeats', download: true),
+    BackendProvider(id: 'cc', name: 'ccMixter', description: 'Creative Commons remixes and originals', download: true),
+    BackendProvider(
+      id: 'ov',
+      name: 'Openverse',
+      description: 'Openly licensed music from Wikimedia Commons, Freesound and more',
+      download: true,
+    ),
     BackendProvider(
       id: 'ia',
       name: 'Internet Archive',
