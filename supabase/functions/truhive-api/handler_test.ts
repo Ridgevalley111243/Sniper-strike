@@ -54,7 +54,8 @@ function fakeFetch(fail: Set<string> = new Set()) {
     }
     if (url.startsWith("https://api.audius.co/v1/tracks/search")) {
       return j({ data: [
-        { id: "aA", title: "Hello Beat", user: { name: "DJ" }, duration: 150, genre: "Electronic", is_downloadable: true, is_streamable: true },
+        { id: "aA", title: "Hello Beat", user: { name: "DJ" }, duration: 150, genre: "Electronic", is_downloadable: true, is_streamable: true,
+          artwork: { "480x480": "https://val017.open-audio-validator.com/content/Qm1/480x480.jpg" } },
         { id: "aB", title: "Gated", user: { name: "DJ" }, duration: 150, is_streamable: true, stream_conditions: { usdc: 1 } },
         { id: "aC", title: "Paid dl", user: { name: "DJ" }, duration: 150, is_downloadable: true, download_conditions: { usdc: 1 } },
       ] });
@@ -105,6 +106,12 @@ function fakeFetch(fail: Set<string> = new Set()) {
     if (url.startsWith("https://ccmixter.org/content/")) {
       return new Response(MP3, { headers: { "content-type": "audio/mpeg", "content-length": String(MP3.length), "accept-ranges": "bytes" } });
     }
+    if (url.startsWith("https://val017.open-audio-validator.com/")) {
+      return new Response(new Uint8Array([0xff, 0xd8]), { headers: { "content-type": "image/jpeg" } });
+    }
+    if (url.startsWith("https://huge.open-audio-validator.com/")) {
+      return new Response(new Uint8Array([1]), { headers: { "content-type": "image/png", "content-length": "9000000" } });
+    }
     if (url.startsWith("https://is1-ssl.mzstatic.com/")) {
       return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { headers: { "content-type": "image/jpeg" } });
     }
@@ -126,6 +133,7 @@ const BASE = "https://x.supabase.co/functions/v1/truhive-api";
 const get = (path: string, headers: Record<string, string> = {}) => handle(new Request(BASE + path, { headers }));
 
 Deno.env.set("JAMENDO_CLIENT_ID", "jam-test");
+Deno.env.set("ART_SIGNING_KEY", "test-signing-key");
 
 Deno.test("health lists enabled providers", async () => {
   fakeFetch();
@@ -315,4 +323,43 @@ Deno.test("stream: full tracks where the provider allows it, never for Apple pre
   assert(calls.includes("https://mp3l.jamendo/78"), "streams Jamendo's audio, not the download");
   const src = await (await get("/api/sources")).json();
   assert(src.sources.find((x: any) => x.id === "it").stream === false && src.sources.find((x: any) => x.id === "au").stream, "capability");
+});
+
+Deno.test("covers from any host load when the backend signed them", async () => {
+  fakeFetch();
+  const d = await (await get("/api/search?q=hello&provider=au")).json();
+  const t = d.results.find((x: any) => x.id === "au:aA");
+  assert(t.artworkUrl.startsWith("https://val017.open-audio-validator.com/") && /^[0-9a-f]{32}$/.test(t.artworkSig), JSON.stringify(t));
+  const art = (u: string, s?: string) => get(`/api/art?u=${encodeURIComponent(u)}${s ? `&s=${s}` : ""}`);
+  const ok = await art(t.artworkUrl, t.artworkSig);
+  assert(ok.status === 200 && ok.headers.get("content-type") === "image/jpeg", String(ok.status));
+  assert((await art(t.artworkUrl)).status === 403, "unsigned unknown host refused");
+  assert((await art(t.artworkUrl, "0".repeat(32))).status === 403, "bad signature refused");
+  assert((await art("https://val017.open-audio-validator.com/other.jpg", t.artworkSig)).status === 403, "signature is per URL");
+  const big = "https://huge.open-audio-validator.com/x.png";
+  const { signArt } = await import("./providers.ts");
+  assert((await art(big, await signArt(big))).status === 502, "oversized images refused");
+  const plain = t.artworkUrl.replace("https:", "http:");
+  assert((await art(plain, await signArt(plain))).status === 403, "https only, even when signed");
+});
+
+Deno.test("Openverse pauses briefly after a timeout instead of slowing every search", async () => {
+  const { resetOpenverseCooldown } = await import("./providers.ts");
+  resetOpenverseCooldown();
+  fakeFetch();
+  const base = globalThis.fetch;
+  let ovCalls = 0;
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    if (String(input).startsWith("https://api.openverse.org/v1/audio/?")) {
+      ovCalls++;
+      throw new DOMException("Signal timed out.", "TimeoutError");
+    }
+    return base(input, init);
+  }) as typeof fetch;
+  assert((await get("/api/search?q=slow%20one&provider=ov")).status === 502, "timeout surfaces as unavailable");
+  assert((await get("/api/search?q=slow%20two&provider=ov")).status === 502, "still unavailable");
+  assert(ovCalls === 1, `no second request during the cooldown (${ovCalls})`);
+  const all = await (await get("/api/search?q=hello%20cooldown")).json();
+  assert(all.results.some((x: any) => x.id.startsWith("jm:")), "other sources unaffected");
+  resetOpenverseCooldown();
 });
