@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/models/models.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
+import '../../core/util/format.dart';
 import '../../services/app_services.dart';
 import '../../services/library_repository.dart';
 import '../actions.dart';
@@ -135,7 +136,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             )),
             gap(Space.md),
           ],
-          box(SectionHeader('Recently Added', action: '${list.length} songs')),
+          box(SectionHeader('Recently Added', action: songCount(list.length))),
           SliverList.builder(
             itemCount: list.length,
             itemBuilder: (_, i) => TrackRow(track: list[i], showFavorite: true, onTap: () => s.player.playTrack(list[i], context: list)),
@@ -207,14 +208,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
               delegate: SliverChildListDelegate([
                 _PlaylistTile(
                   title: 'Favorites',
-                  subtitle: '${lib.favorites.length} songs',
+                  subtitle: songCount(lib.favorites.length),
                   favorite: true,
                   onTap: () => context.push('/favorites'),
                 ),
                 for (final p in all)
                   _PlaylistTile(
                     title: p.name,
-                    subtitle: '${p.trackIds.length} songs',
+                    subtitle: songCount(p.trackIds.length),
                     seed: p.trackIds.isEmpty ? p.id : (lib.byId(p.trackIds.first)?.artSeed ?? p.id),
                     onTap: () => context.push('/playlist/${p.id}'),
                   ),
@@ -422,7 +423,7 @@ class PlaylistScreen extends StatelessWidget {
                 const SizedBox(width: Space.lg),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Playlist · ${tracks.length} songs${total > Duration.zero ? ' · ${total.inMinutes} min' : ''}', style: AppText.caption.muted),
+                    Text('Playlist · ${songCount(tracks.length)}${total >= const Duration(minutes: 1) ? ' · ${total.inMinutes} min' : ''}', style: AppText.caption.muted),
                     const SizedBox(height: 4),
                     Text(p.name, style: AppText.h1, maxLines: 2, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 4),

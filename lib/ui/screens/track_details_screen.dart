@@ -27,7 +27,12 @@ class TrackDetailsScreen extends StatelessWidget {
       child: ListenableBuilder(
         listenable: Listenable.merge([s.library, s.downloads, s.player]),
         builder: (context, _) {
-          final local = g.sources.map((x) => s.library.byId(x.localId)).whereType<Track>().firstOrNull;
+          final local = g.sources.where((x) => s.library.contains(x.localId)).map((x) => s.library.byId(x.localId)!).firstOrNull;
+          // The song as playlists and favorites see it: the file, or the
+          // online song when it can be streamed.
+          final streamSrc = g.streamSource;
+          final saved = local ?? (streamSrc == null ? null : s.library.byId(streamSrc.localId) ?? Track.online(streamSrc));
+          final playing = s.player.isCurrent(g) && s.player.isPlaying;
           final lyricsSrc = g.sources.where(s.lyrics.available).firstOrNull;
           final wide = MediaQuery.sizeOf(context).width >= Breakpoints.tablet;
           final art = Artwork(seed: g.artSeed, size: wide ? 180 : 132, radius: 22, shadow: Effects.elevation);
@@ -52,8 +57,18 @@ class TrackDetailsScreen extends StatelessWidget {
             gap(Space.xl),
             box(Row(children: [
               Expanded(
-                child: local != null
-                    ? AppButton(label: 'Play', icon: LucideIcons.play, compact: true, expand: true, onPressed: () => s.player.playTrack(local))
+                child: local != null || g.canStream
+                    ? AppButton(
+                        label: playing ? 'Pause' : (local != null ? 'Play' : 'Play · streams online'),
+                        icon: playing ? LucideIcons.pause : LucideIcons.play,
+                        compact: true,
+                        expand: true,
+                        onPressed: () => s.player.isCurrent(g)
+                            ? s.player.togglePlay()
+                            : local != null
+                                ? s.player.playTrack(local)
+                                : s.player.playStream(g),
+                      )
                     : AppButton(
                         label: s.player.isPreviewing(g) && s.player.isPlaying ? 'Pause preview' : 'Preview',
                         icon: s.player.isPreviewing(g) && s.player.isPlaying ? LucideIcons.pause : LucideIcons.play,
@@ -70,21 +85,30 @@ class TrackDetailsScreen extends StatelessWidget {
             ])),
             gap(Space.lg),
             box(Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-              if (local != null)
+              if (saved != null)
                 _Quick(
                   icon: LucideIcons.heart,
-                  label: s.library.isFavorite(local.id) ? 'Favorited' : 'Favorite',
-                  active: s.library.isFavorite(local.id),
-                  onTap: () => s.library.toggleFavorite(local.id),
+                  label: s.library.isFavorite(saved.id) ? 'Favorited' : 'Favorite',
+                  active: s.library.isFavorite(saved.id),
+                  onTap: () async {
+                    if (saved.isOnline) await s.library.saveOnline(saved);
+                    await s.library.toggleFavorite(saved.id);
+                  },
                 ),
-              if (local != null) _Quick(icon: LucideIcons.listPlus, label: 'Playlist', onTap: () => showAddToPlaylist(context, local.id)),
+              if (saved != null) _Quick(icon: LucideIcons.listPlus, label: 'Playlist', onTap: () => showAddToPlaylist(context, saved)),
               if (lyricsSrc != null) _Quick(icon: LucideIcons.textQuote, label: 'Lyrics', onTap: () => context.push('/lyrics', extra: lyricsSrc)),
               if (local != null) _Quick(icon: LucideIcons.share2, label: 'Share', onTap: () => shareTrack(context, local)),
             ])),
             if (local == null) ...[
               gap(Space.sm),
-              box(Text('Download this song to add it to favorites and playlists, or to share the file.',
-                  textAlign: TextAlign.center, style: AppText.caption.muted)),
+              box(Text(
+                  g.canStream
+                      ? g.canDownload
+                          ? 'Plays over the internet. Download it to listen offline or share the file.'
+                          : 'Plays over the internet. The artist hasn’t allowed downloads of this song.'
+                      : 'Only a 30-second preview is licensed for this song.',
+                  textAlign: TextAlign.center,
+                  style: AppText.caption.muted)),
             ],
             gap(Space.xl),
             box(SectionHeader('Available Sources', action: '${g.sources.length} found')),
@@ -99,7 +123,7 @@ class TrackDetailsScreen extends StatelessWidget {
               ]),
             )),
             gap(Space.md),
-            box(Text('Downloads are offered only where the source licenses them.', style: AppText.caption.muted)),
+            box(Text('Downloads and full streams are offered only where the source licenses them.', style: AppText.caption.muted)),
           ]);
         },
       ),
@@ -159,9 +183,11 @@ class _SourceLine extends StatelessWidget {
     final src = s.sources.byId(source.sourceId);
     final meta = source.downloadAvailable
         ? [source.format ?? 'Audio', if (source.sizeBytes != null) formatBytes(source.sizeBytes!)].join(' · ')
-        : source.previewAvailable
-            ? 'Preview only · 30 sec'
-            : 'Search only';
+        : source.streamAvailable
+            ? 'Stream only · full song'
+            : source.previewAvailable
+                ? 'Preview only · 30 sec'
+                : 'Search only';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Space.md),
       child: Row(children: [
@@ -179,7 +205,7 @@ class _SourceLine extends StatelessWidget {
             Text(meta, style: AppText.caption.muted),
             const SizedBox(height: 6),
             Wrap(spacing: 4, runSpacing: 4, children: [
-              if (source.previewAvailable) const AppTag('Preview'),
+              if (source.streamAvailable) const AppTag('Stream') else if (source.previewAvailable) const AppTag('Preview'),
               if (source.downloadAvailable) const AppTag('Download'),
               if (source.lyricsAvailable) const AppTag('Lyrics'),
               if (src?.isDemo ?? false) const AppTag('Demo', muted: true),
@@ -188,6 +214,12 @@ class _SourceLine extends StatelessWidget {
         ),
         if (source.downloadAvailable)
           DownloadControl(group: group, source: source)
+        else if (source.streamAvailable)
+          CircleIconButton(
+            icon: s.player.current?.id == source.localId && s.player.isPlaying ? LucideIcons.pause : LucideIcons.play,
+            tooltip: 'Play from ${source.sourceName}',
+            onPressed: () => s.player.playStream(group, from: source),
+          )
         else if (source.previewAvailable)
           CircleIconButton(
             icon: s.player.previewSource?.localId == source.localId && s.player.isPlaying ? LucideIcons.pause : LucideIcons.play,

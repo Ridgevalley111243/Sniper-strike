@@ -135,13 +135,16 @@ Future<void> showTrackActions(BuildContext context, Track t) {
       s.player.addToQueue(t);
       showToast(context, 'Added to queue');
     }),
-    _SheetAction(LucideIcons.plus, 'Add to playlist', () => showAddToPlaylist(context, t.id)),
+    _SheetAction(LucideIcons.plus, 'Add to playlist', () => showAddToPlaylist(context, t)),
     _SheetAction(LucideIcons.heart, fav ? 'Remove from favorites' : 'Add to favorites', () => s.library.toggleFavorite(t.id)),
     if (lyrics) _SheetAction(LucideIcons.textQuote, 'Lyrics', () => context.push('/lyrics', extra: LyricsService.sourceTrackOf(t))),
-    _SheetAction(LucideIcons.share2, 'Share', () => shareTrack(context, t)),
-    _SheetAction(LucideIcons.arrowDownToLine, 'Save a copy to device', () => exportTrack(context, t)),
-    if (!t.inLibrary) _SheetAction(LucideIcons.library, 'Add to library', () => s.library.setInLibrary(t.id, true)),
-    _SheetAction(LucideIcons.trash2, 'Delete from device', () async {
+    // Online songs have no file to share, export or delete.
+    if (!t.isOnline) ...[
+      _SheetAction(LucideIcons.share2, 'Share', () => shareTrack(context, t)),
+      _SheetAction(LucideIcons.arrowDownToLine, 'Save a copy to device', () => exportTrack(context, t)),
+      if (!t.inLibrary) _SheetAction(LucideIcons.library, 'Add to library', () => s.library.setInLibrary(t.id, true)),
+    ],
+    if (!t.isOnline) _SheetAction(LucideIcons.trash2, 'Delete from device', () async {
       if (await confirm(context, title: 'Delete “${t.title}”?', message: 'The file will be removed from this device.')) {
         await s.deleteTrack(t.id);
         if (context.mounted) showToast(context, 'Deleted from this device');
@@ -153,11 +156,20 @@ Future<void> showTrackActions(BuildContext context, Track t) {
 
 Future<void> showGroupActions(BuildContext context, TrackGroup g) {
   final s = context.services;
-  final local = g.sources.map((x) => s.library.byId(x.localId)).whereType<Track>().firstOrNull;
+  final local = g.sources.where((x) => s.library.contains(x.localId)).map((x) => s.library.byId(x.localId)!).firstOrNull;
+  final stream = g.streamSource;
+  final saved = local ?? (stream == null ? null : s.library.byId(stream.localId) ?? Track.online(stream));
   return _actionSheet(context, header: _sheetHeader(g.artSeed, g.title, g.artist), actions: [
     if (local != null) _SheetAction(LucideIcons.play, 'Play from device', () => s.player.playTrack(local)),
-    if (g.canPreview) _SheetAction(LucideIcons.play, 'Preview', () => s.player.playPreview(g)),
+    if (local == null && stream != null) _SheetAction(LucideIcons.play, 'Play (streams online)', () => s.player.playStream(g)),
+    if (local == null && stream == null && g.canPreview) _SheetAction(LucideIcons.play, 'Preview', () => s.player.playPreview(g)),
     if (g.canDownload && local == null) _SheetAction(LucideIcons.download, 'Download', () => startDownload(context, g)),
+    if (saved != null) _SheetAction(LucideIcons.plus, 'Add to playlist', () => showAddToPlaylist(context, saved)),
+    if (saved != null)
+      _SheetAction(LucideIcons.heart, s.library.isFavorite(saved.id) ? 'Remove from favorites' : 'Add to favorites', () async {
+        if (saved.isOnline) await s.library.saveOnline(saved);
+        await s.library.toggleFavorite(saved.id);
+      }),
     _SheetAction(LucideIcons.globe, 'View sources & details', () => context.push('/track', extra: g)),
   ]);
 }
@@ -171,8 +183,15 @@ void startDownload(BuildContext context, TrackGroup g, {SourceTrack? from}) {
   if (task != null) showToast(context, 'Downloading “${g.title}” from ${task.source.sourceName}', action: 'View', onAction: () => context.go('/downloads'));
 }
 
-Future<void> showAddToPlaylist(BuildContext context, String trackId) {
+/// Adds [track] to a playlist. Online songs are saved first, so the playlist
+/// can play them over the internet.
+Future<void> showAddToPlaylist(BuildContext context, Track track) {
   final s = context.services;
+  final trackId = track.id;
+  Future<void> remember() async {
+    if (track.isOnline) await s.library.saveOnline(track);
+  }
+
   return showModalBottomSheet<void>(
     context: context,
     useSafeArea: true,
@@ -192,6 +211,7 @@ Future<void> showAddToPlaylist(BuildContext context, String trackId) {
               onTap: () async {
                 final name = await promptText(sheet, title: 'New playlist', hint: 'Playlist name', confirmLabel: 'Create');
                 if (name == null) return;
+                await remember();
                 final p = await s.playlists.create(name, trackIds: [trackId]);
                 if (sheet.mounted) Navigator.pop(sheet);
                 if (context.mounted) showToast(context, 'Added to ${p.name}');
@@ -202,9 +222,10 @@ Future<void> showAddToPlaylist(BuildContext context, String trackId) {
                 contentPadding: EdgeInsets.zero,
                 leading: Artwork(seed: p.trackIds.isEmpty ? p.id : (s.library.byId(p.trackIds.first)?.artSeed ?? p.id), size: 44),
                 title: Text(p.name, style: AppText.bodyMedium),
-                subtitle: Text('${p.trackIds.length} songs', style: AppText.caption.muted),
+                subtitle: Text(songCount(p.trackIds.length), style: AppText.caption.muted),
                 trailing: p.trackIds.contains(trackId) ? const Icon(LucideIcons.check, color: AppColors.success) : null,
                 onTap: () async {
+                  await remember();
                   final added = await s.playlists.addTrack(p.id, trackId);
                   if (sheet.mounted) Navigator.pop(sheet);
                   if (context.mounted) showToast(context, added ? 'Added to ${p.name}' : 'Already in ${p.name}');

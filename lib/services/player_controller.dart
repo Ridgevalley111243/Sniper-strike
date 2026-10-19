@@ -11,16 +11,23 @@ import 'library_repository.dart';
 
 enum PlayerRepeat { off, all, one }
 
-/// The single source of truth for playback. The mini player, the full player,
-/// the desktop player bar, the queue and the lock-screen controls all read
-/// from this one controller.
 /// Real cover art (an image URL used as the art seed) for the lock screen and
 /// notification; generated covers have no URL to show there.
 Uri? _artUri(String seed) => seed.startsWith('https://') ? Uri.tryParse(seed) : null;
 
+/// The single source of truth for playback. The mini player, the full player,
+/// the desktop player bar, the queue and the lock-screen controls all read
+/// from this one controller.
+///
+/// Songs play from their file on this device; online songs (see
+/// [Track.isOnline]) stream from their source and need the internet.
 class PlayerController extends ChangeNotifier {
-  PlayerController(this._library, this._files, this._sources, {this.autoplayEnabled}) {
+  PlayerController(this._library, this._files, this._sources, {this.autoplayEnabled, this.isOnline}) {
     _subs.addAll([
+      // Streams can fail mid-song (connection lost, source down).
+      _player.playbackEventStream.listen((_) {}, onError: (Object _, StackTrace _) {
+        _fail('Playback stopped. Check your internet connection.');
+      }),
       _player.currentIndexStream.listen((_) => _onTrackChanged()),
       _player.playerStateStream.listen((s) {
         if (s.processingState == ProcessingState.completed) {
@@ -48,10 +55,23 @@ class PlayerController extends ChangeNotifier {
 
   /// "Autoplay" setting: keep playing from the library when the queue ends.
   final bool Function()? autoplayEnabled;
+
+  /// Whether the internet is reachable; online songs are skipped when not.
+  final bool Function()? isOnline;
   final AudioPlayer _player = AudioPlayer();
   final List<StreamSubscription<dynamic>> _subs = [];
 
   List<Track> _queue = [];
+
+  /// Problems worth telling the user about wherever they are (shown as a toast).
+  Stream<String> get notices => _notices.stream;
+  final _notices = StreamController<String>.broadcast();
+
+  void _fail(String message) {
+    lastError = message;
+    _notices.add(message);
+    notifyListeners();
+  }
   PlayerRepeat _repeat = PlayerRepeat.off;
 
   // Preview state (a 30-second clip from an online source).
@@ -98,8 +118,20 @@ class PlayerController extends ChangeNotifier {
   String get artist => isPreview ? previewGroup!.artist : (current?.artist ?? '');
   String get artSeed => isPreview ? previewGroup!.artSeed : (current?.artSeed ?? 'none');
 
+  /// True for an online song with no downloaded copy.
+  bool needsInternet(Track t) => t.isOnline && !_library.contains(t.id);
+
   Future<AudioSource> _sourceFor(Track t) async {
-    final uri = await _files.playableUri(t.fileKey, t.mimeType);
+    // A downloaded copy of an online song always plays from the device.
+    final local = _library.contains(t.id) ? _library.byId(t.id)! : t;
+    final Uri uri;
+    if (local.isOnline) {
+      final stream = _sources.byId(local.sourceId ?? '')?.streamUri(local.sourceTrackId ?? '');
+      if (stream == null) throw StateError('${local.sourceName ?? 'This source'} no longer streams this song');
+      uri = stream;
+    } else {
+      uri = await _files.playableUri(local.fileKey, local.mimeType);
+    }
     return AudioSource.uri(uri, tag: MediaItem(id: t.id, title: t.title, artist: t.artist, album: t.album, duration: t.duration, artUri: _artUri(t.artSeed)));
   }
 
@@ -108,7 +140,18 @@ class PlayerController extends ChangeNotifier {
     previewGroup = null;
     previewSource = null;
     lastError = null;
-    _queue = List.of(tracks);
+    var list = tracks;
+    if (!(isOnline?.call() ?? true) && tracks.any(needsInternet)) {
+      final chosen = tracks[start.clamp(0, tracks.length - 1)];
+      list = tracks.where((t) => !needsInternet(t)).toList();
+      if (list.isEmpty) {
+        _fail("You're offline. Online songs need an internet connection.");
+        return;
+      }
+      _fail("Online songs are skipped while you're offline.");
+      start = list.indexOf(chosen).clamp(0, list.length - 1);
+    }
+    _queue = List.of(list);
     notifyListeners();
     try {
       final sources = await Future.wait(_queue.map(_sourceFor));
@@ -118,8 +161,7 @@ class PlayerController extends ChangeNotifier {
       await _applyLoopMode();
       unawaited(_player.play());
     } catch (e) {
-      lastError = 'This file could not be played.';
-      notifyListeners();
+      _fail(_queue.any(needsInternet) ? "This song couldn't be streamed. Check your connection." : 'This file could not be played.');
     }
   }
 
@@ -127,6 +169,24 @@ class PlayerController extends ChangeNotifier {
     final list = context ?? [t];
     final i = list.indexWhere((x) => x.id == t.id);
     await playTracks(list, start: i < 0 ? 0 : i);
+  }
+
+  /// Plays the whole song over the internet from a source that allows full
+  /// streaming. The song is remembered so it can go into playlists,
+  /// favorites and history like any other.
+  Future<void> playStream(TrackGroup g, {SourceTrack? from}) async {
+    final src = from ?? g.streamSource;
+    if (src == null) return;
+    if (current?.id == src.localId) return togglePlay();
+    final t = Track.online(src);
+    await _library.saveOnline(t);
+    await playTracks([_library.byId(t.id) ?? t]);
+  }
+
+  /// Whether [g] is the song currently loaded (streamed or from the device).
+  bool isCurrent(TrackGroup g) {
+    final id = current?.id;
+    return id != null && g.sources.any((s) => s.localId == id);
   }
 
   /// Plays a short preview from the best preview-capable source of [g].
@@ -283,6 +343,7 @@ class PlayerController extends ChangeNotifier {
       s.cancel();
     }
     _player.dispose();
+    _notices.close();
     super.dispose();
   }
 }

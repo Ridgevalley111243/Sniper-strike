@@ -12,6 +12,7 @@ class BackendProvider {
     required this.name,
     this.description = '',
     this.preview = true,
+    this.stream = false,
     this.download = false,
     this.lyrics = false,
   });
@@ -21,6 +22,7 @@ class BackendProvider {
     name: j['name'] as String,
     description: (j['description'] as String?) ?? '',
     preview: (j['preview'] as bool?) ?? true,
+    stream: (j['stream'] as bool?) ?? false,
     download: (j['download'] as bool?) ?? false,
     lyrics: (j['lyrics'] as bool?) ?? false,
   );
@@ -30,6 +32,7 @@ class BackendProvider {
     'name': name,
     'description': description,
     'preview': preview,
+    'stream': stream,
     'download': download,
     'lyrics': lyrics,
   };
@@ -38,6 +41,7 @@ class BackendProvider {
   final String name;
   final String description;
   final bool preview;
+  final bool stream;
   final bool download;
   final bool lyrics;
 }
@@ -76,8 +80,14 @@ class BackendSource extends MusicSource {
   bool get isDemo => false;
   @override
   SourceCapabilities get capabilities => provider == null
-      ? const SourceCapabilities(search: true, preview: true, download: true, lyrics: true)
-      : SourceCapabilities(search: true, preview: provider!.preview, download: provider!.download, lyrics: provider!.lyrics);
+      ? const SourceCapabilities(search: true, preview: true, stream: true, download: true, lyrics: true)
+      : SourceCapabilities(
+          search: true,
+          preview: provider!.preview,
+          stream: provider!.stream,
+          download: provider!.download,
+          lyrics: provider!.lyrics,
+        );
 
   Uri _u(String path, [Map<String, String>? q]) => endpoint(baseUrl, path, q);
 
@@ -128,6 +138,7 @@ class BackendSource extends MusicSource {
           genre: j['genre'] as String?,
           year: (j['year'] as num?)?.toInt(),
           previewAvailable: (j['preview'] as bool?) ?? false,
+          streamAvailable: (j['stream'] as bool?) ?? false,
           downloadAvailable: (j['download'] as bool?) ?? false,
           lyricsAvailable: (j['lyrics'] as bool?) ?? false,
           format: j['format'] as String?,
@@ -141,6 +152,9 @@ class BackendSource extends MusicSource {
     final uri = _u('/api/preview/${Uri.encodeComponent(track.sourceTrackId)}');
     return PreviewAudio(uri: uri, mimeType: 'audio/mpeg', length: const Duration(seconds: 30));
   }
+
+  @override
+  Uri? streamUri(String sourceTrackId) => _u('/api/stream/${Uri.encodeComponent(sourceTrackId)}');
 
   @override
   Future<DownloadStream> openDownload(SourceTrack track, {int fromByte = 0}) async {

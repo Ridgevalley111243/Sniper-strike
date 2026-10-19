@@ -2,7 +2,7 @@
 // BackendSource expects (see README "Connecting a backend").
 //
 //   GET /api/health · /api/sources · /api/search?q=[&provider=] · /api/art?u=
-//       /api/preview/:id · /api/download/:id · /api/lyrics/:id
+//       /api/preview/:id · /api/stream/:id · /api/download/:id · /api/lyrics/:id
 //
 // Stateless by design: no database, no storage. Audio is streamed from the
 // provider to the user's device and never kept here.
@@ -39,11 +39,15 @@ async function search(q: string, only: string | null): Promise<Response> {
 }
 
 /** Streams provider audio through, passing Range so downloads can resume. */
-async function audio(id: string, kind: "preview" | "download", req: Request): Promise<Response> {
+async function audio(id: string, kind: "preview" | "stream" | "download", req: Request): Promise<Response> {
   const r = resolve(id);
   if (!r) return json({ error: "unknown track" }, 404);
   const info = await r[0].info(r[1]);
-  const url = kind === "download" ? info?.downloadUrl : (info?.previewUrl ?? info?.downloadUrl);
+  const url = kind === "download"
+    ? info?.downloadUrl
+    : kind === "stream"
+    ? info?.streamUrl
+    : (info?.previewUrl ?? info?.downloadUrl);
   if (!url) return json({ error: `${kind} not available for this track` }, 404);
 
   const headers: Record<string, string> = { "user-agent": "TRUHive/1.0" };
@@ -100,7 +104,7 @@ export async function handle(req: Request): Promise<Response> {
   if (req.method !== "GET") return json({ error: "method not allowed" }, 405);
   const url = new URL(req.url);
   // The function is mounted at /functions/v1/truhive-api, so match from /api/.
-  const m = url.pathname.match(/\/api\/(health|sources|search|art|preview|download|lyrics)(?:\/(.+))?$/);
+  const m = url.pathname.match(/\/api\/(health|sources|search|art|preview|stream|download|lyrics)(?:\/(.+))?$/);
   if (!m) return json({ error: "not found" }, 404);
   const id = m[2] ? decodeURIComponent(m[2]) : "";
   try {
@@ -121,6 +125,7 @@ export async function handle(req: Request): Promise<Response> {
       case "art":
         return await art(url.searchParams.get("u"));
       case "preview":
+      case "stream":
       case "download":
         return await audio(id, m[1], req);
       case "lyrics":

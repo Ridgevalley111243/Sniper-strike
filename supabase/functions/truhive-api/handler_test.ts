@@ -300,3 +300,19 @@ Deno.test("Openverse uses client credentials when configured", async () => {
   Deno.env.delete("OPENVERSE_CLIENT_SECRET");
   assert(auth === "Bearer tok", auth);
 });
+
+Deno.test("stream: full tracks where the provider allows it, never for Apple previews", async () => {
+  fakeFetch();
+  const d = await (await get("/api/search?q=hello")).json();
+  const by = (id: string) => d.results.find((t: any) => t.id === id);
+  assert(by("it:11").stream === false, "Apple Music never streams in full");
+  assert(by("jm:78").stream === true && by("jm:78").download === false, "stream-only Jamendo track");
+  assert(by("au:aC").stream === true && by("au:aC").download === false, "stream-only Audius track");
+  assert((await get("/api/stream/it%3A11")).status === 404, "no full stream from Apple");
+  calls.length = 0;
+  const s = await get("/api/stream/jm%3A78", { range: "bytes=100-" });
+  assert(s.status === 206 && (await s.arrayBuffer()).byteLength === 900, "seekable stream");
+  assert(calls.includes("https://mp3l.jamendo/78"), "streams Jamendo's audio, not the download");
+  const src = await (await get("/api/sources")).json();
+  assert(src.sources.find((x: any) => x.id === "it").stream === false && src.sources.find((x: any) => x.id === "au").stream, "capability");
+});

@@ -190,8 +190,10 @@ class _PlayerColumn extends StatelessWidget {
       if (current != null)
         Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: Space.sm, children: [
           if (hasLyrics && !wide) _Pill(LucideIcons.textQuote, 'Lyrics', () => context.push('/lyrics', extra: lyricsSrc)),
-          _Pill(LucideIcons.listPlus, 'Add', () => showAddToPlaylist(context, current.id)),
-          _Pill(LucideIcons.share2, 'Share', () => shareTrack(context, current)),
+          _Pill(LucideIcons.listPlus, 'Add', () => showAddToPlaylist(context, current)),
+          // Only a file on this device can be shared; streamed songs have none.
+          if (s.library.contains(current.id))
+            _Pill(LucideIcons.share2, 'Share', () => shareTrack(context, s.library.byId(current.id)!)),
           _Pill(LucideIcons.listMusic, 'Up Next', () => context.push('/queue')),
         ])
       else if (p.isPreview)
