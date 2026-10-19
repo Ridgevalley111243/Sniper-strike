@@ -384,7 +384,7 @@ class SettingsScreen extends StatelessWidget {
             _row(LucideIcons.shieldCheck, 'Privacy & legal', onTap: () => _legal(context)),
           ]),
           gap(Space.lg),
-          box(Text('TRUHive 1.0.0 · No account needed. Your music stays on this device.', style: AppText.caption.muted)),
+          box(Text('TRUHive $appVersion · No account needed. Your music stays on this device.', style: AppText.caption.muted)),
         ]),
       ),
     );
@@ -393,7 +393,7 @@ class SettingsScreen extends StatelessWidget {
   static void _about(BuildContext context) => showAboutDialog(
         context: context,
         applicationName: 'TRUHive',
-        applicationVersion: '1.0.0',
+        applicationVersion: appVersion,
         applicationLegalese: 'Search it. Preview it. Download it. Keep it on your device. Play it offline.',
       );
 
@@ -450,3 +450,8 @@ class SettingsScreen extends StatelessWidget {
         ),
       );
 }
+
+/// "1.0.0", plus the build (commit) when CI passes `--dart-define=TRUHIVE_BUILD=…`,
+/// so it's easy to tell which version a browser is running.
+const _build = String.fromEnvironment('TRUHIVE_BUILD');
+final appVersion = _build == '' ? '1.0.0' : '1.0.0 (build ${_build.length > 7 ? _build.substring(0, 7) : _build})';
