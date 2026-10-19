@@ -40,3 +40,6 @@ String greetingFor(DateTime now) {
   if (h < 18) return 'Good afternoon';
   return 'Good evening';
 }
+
+/// "1 song", "4 songs".
+String songCount(int n) => '$n ${n == 1 ? 'song' : 'songs'}';

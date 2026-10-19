@@ -4,9 +4,18 @@
 /// What a music source is able to do. The UI only offers an action when the
 /// source that would perform it declares the capability.
 class SourceCapabilities {
-  const SourceCapabilities({this.search = true, this.preview = false, this.download = false, this.lyrics = false});
+  const SourceCapabilities({
+    this.search = true,
+    this.preview = false,
+    this.stream = false,
+    this.download = false,
+    this.lyrics = false,
+  });
   final bool search;
   final bool preview;
+
+  /// Full-length playback over the internet, for songs that can't be kept.
+  final bool stream;
   final bool download;
   final bool lyrics;
 }
@@ -25,6 +34,7 @@ class SourceTrack {
     this.genre,
     this.year,
     this.previewAvailable = false,
+    this.streamAvailable = false,
     this.downloadAvailable = false,
     this.lyricsAvailable = false,
     this.format,
@@ -42,6 +52,7 @@ class SourceTrack {
   final String? genre;
   final int? year;
   final bool previewAvailable;
+  final bool streamAvailable;
   final bool downloadAvailable;
   final bool lyricsAvailable;
   final String? format;
@@ -69,10 +80,12 @@ class TrackGroup {
   int? get year => sources.map((s) => s.year).firstWhere((y) => y != null, orElse: () => null);
 
   bool get canPreview => sources.any((s) => s.previewAvailable);
+  bool get canStream => sources.any((s) => s.streamAvailable);
   bool get canDownload => sources.any((s) => s.downloadAvailable);
   bool get hasLyrics => sources.any((s) => s.lyricsAvailable);
 
   SourceTrack? get previewSource => _first((s) => s.previewAvailable);
+  SourceTrack? get streamSource => _first((s) => s.streamAvailable);
   SourceTrack? get downloadSource => _first((s) => s.downloadAvailable);
 
   SourceTrack? _first(bool Function(SourceTrack) test) {
@@ -83,9 +96,12 @@ class TrackGroup {
   }
 }
 
-enum TrackOrigin { download, import }
+/// download/import: a file on this device. stream: a song saved from an
+/// online source (to a playlist or favorites) that plays over the internet.
+enum TrackOrigin { download, import, stream }
 
-/// A track that physically lives on this device.
+/// A song in the user's collection: usually a file on this device, or an
+/// online song that streams ([isOnline]).
 class Track {
   const Track({
     required this.id,
@@ -109,6 +125,31 @@ class Track {
     this.inLibrary = true,
   });
 
+  /// An online song saved from [source]: no file, it streams when played.
+  /// Its id matches the id a download of the same song gets, so downloading
+  /// it later simply takes over.
+  factory Track.online(SourceTrack source) => Track(
+        id: source.localId,
+        title: source.title,
+        artist: source.artist,
+        album: source.album,
+        duration: source.duration,
+        artSeed: source.artSeed,
+        origin: TrackOrigin.stream,
+        fileKey: '',
+        fileName: '',
+        sizeBytes: 0,
+        mimeType: '',
+        addedAt: DateTime.now(),
+        genre: source.genre,
+        year: source.year,
+        sourceId: source.sourceId,
+        sourceName: source.sourceName,
+        sourceTrackId: source.sourceTrackId,
+        lyricsAvailable: source.lyricsAvailable,
+        inLibrary: false,
+      );
+
   final String id;
   final String title;
   final String artist;
@@ -131,6 +172,8 @@ class Track {
   /// False when "Automatically add downloads to library" is off: the file is
   /// kept in Downloads but not listed in Library until the user adds it.
   final bool inLibrary;
+
+  bool get isOnline => origin == TrackOrigin.stream;
 
   Track copyWith({Duration? duration, String? title, String? artist, bool? inLibrary}) => Track(
         id: id,

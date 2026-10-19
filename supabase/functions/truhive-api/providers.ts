@@ -15,6 +15,8 @@ export type Track = {
   artworkSeed: string;
   provider: string;
   preview: boolean;
+  /** Full-length playback over the internet is allowed. */
+  stream: boolean;
   download: boolean;
   lyrics: boolean;
   format?: string;
@@ -30,6 +32,8 @@ export type TrackInfo = {
   album: string;
   durationSec: number;
   previewUrl?: string;
+  /** Full-length audio the provider lets apps stream (not keep). */
+  streamUrl?: string;
   downloadUrl?: string;
   plainLyrics?: string;
 };
@@ -39,7 +43,7 @@ export interface Provider {
   name: string;
   description: string;
   /** What this provider can ever do; each track still says what it allows. */
-  can: { preview: boolean; download: boolean; lyrics: boolean };
+  can: { preview: boolean; stream: boolean; download: boolean; lyrics: boolean };
   enabled(): boolean;
   search(q: string): Promise<Track[]>;
   info(id: string): Promise<TrackInfo | null>;
@@ -65,7 +69,7 @@ export const itunes: Provider = {
   prefix: "it",
   name: "Apple Music",
   description: "Mainstream catalogue · 30-second previews",
-  can: { preview: true, download: false, lyrics: true },
+  can: { preview: true, stream: false, download: false, lyrics: true },
   enabled: () => true,
   async search(q) {
     const d = await getJson(
@@ -84,6 +88,7 @@ export const itunes: Provider = {
         artworkSeed: `it:${r.collectionId ?? r.trackId}`,
         provider: "Apple Music",
         preview: true,
+        stream: false, // Apple only licenses 30-second previews to apps
         download: false,
         lyrics: true,
         format: "AAC",
@@ -123,7 +128,7 @@ export const archive: Provider = {
   prefix: "ia",
   name: "Internet Archive",
   description: "Public domain, Creative Commons and live concert recordings",
-  can: { preview: true, download: true, lyrics: false },
+  can: { preview: true, stream: true, download: true, lyrics: false },
   enabled: () => true,
   async search(q) {
     const query = `(${q.replace(/[()]/g, " ")}) AND ${IA_FILTER}`;
@@ -152,6 +157,7 @@ export const archive: Provider = {
           artworkSeed: `ia:${doc.identifier}`,
           provider: "Internet Archive",
           preview: true,
+          stream: true,
           download: true,
           lyrics: false,
           format: "MP3",
@@ -176,6 +182,7 @@ export const archive: Provider = {
       album: first(d.metadata?.title) ?? "",
       durationSec: iaSeconds(f.length),
       previewUrl: url,
+      streamUrl: url,
       downloadUrl: url,
     };
   },
@@ -195,7 +202,7 @@ export const jamendo: Provider = {
   prefix: "jm",
   name: "Jamendo",
   description: "Independent artists · Creative Commons",
-  can: { preview: true, download: true, lyrics: true },
+  can: { preview: true, stream: true, download: true, lyrics: true },
   enabled: () => jamendoId() !== "",
   async search(q) {
     const d = await jamendoTracks(`limit=15&search=${encodeURIComponent(q)}`);
@@ -212,6 +219,7 @@ export const jamendo: Provider = {
         artworkSeed: `jm:${r.album_id ?? r.id}`,
         provider: "Jamendo",
         preview: !!r.audio,
+        stream: !!r.audio,
         download: r.audiodownload_allowed === true && !!r.audiodownload,
         lyrics,
         format: "MP3",
@@ -229,6 +237,7 @@ export const jamendo: Provider = {
       album: r.album_name ?? "",
       durationSec: r.duration ?? 0,
       previewUrl: r.audio || undefined,
+      streamUrl: r.audio || undefined,
       downloadUrl: r.audiodownload_allowed === true && r.audiodownload ? r.audiodownload : undefined,
       plainLyrics: r.musicinfo?.lyrics || undefined,
     };
@@ -249,7 +258,7 @@ export const audius: Provider = {
   prefix: "au",
   name: "Audius",
   description: "Independent artists · hip-hop, electronic, Afrobeats",
-  can: { preview: true, download: true, lyrics: false },
+  can: { preview: true, stream: true, download: true, lyrics: false },
   enabled: () => Deno.env.get("AUDIUS_DISABLED") !== "1",
   async search(q) {
     const d = await getJson(`${AUDIUS}/tracks/search?query=${encodeURIComponent(q)}&${audiusQs()}`);
@@ -267,6 +276,7 @@ export const audius: Provider = {
         artworkSeed: `au:${r.id}`,
         provider: "Audius",
         preview: true,
+        stream: true,
         download: audiusDownloadable(r),
         lyrics: false,
         format: "MP3",
@@ -284,6 +294,7 @@ export const audius: Provider = {
       album: "",
       durationSec: r.duration ?? 0,
       previewUrl: `${base}/stream?${audiusQs()}`,
+      streamUrl: `${base}/stream?${audiusQs()}`,
       downloadUrl: audiusDownloadable(r) ? `${base}/download?${audiusQs()}` : undefined,
     };
   },
@@ -316,6 +327,7 @@ function ccTrack(u: any): Track | null {
     artworkSeed: `cc:${u.upload_id}`,
     provider: "ccMixter",
     preview: true,
+    stream: true,
     download: true,
     lyrics: false,
     format: "MP3",
@@ -327,7 +339,7 @@ export const ccmixter: Provider = {
   prefix: "cc",
   name: "ccMixter",
   description: "Creative Commons remixes and originals",
-  can: { preview: true, download: true, lyrics: false },
+  can: { preview: true, stream: true, download: true, lyrics: false },
   enabled: () => Deno.env.get("CCMIXTER_DISABLED") !== "1",
   async search(q) {
     const d = await getJson(`${CCMIXTER}?f=json&lic=all&sort=rank&limit=15&searchp=${encodeURIComponent(q)}`);
@@ -344,6 +356,7 @@ export const ccmixter: Provider = {
       album: "",
       durationSec: iaSeconds(f.file_format_info?.ps),
       previewUrl: f.download_url,
+      streamUrl: f.download_url,
       downloadUrl: f.download_url,
     };
   },
@@ -389,6 +402,7 @@ function ovTrack(r: any): Track | null {
     artworkSeed: `ov:${r.id}`,
     provider: "Openverse",
     preview: true,
+    stream: true,
     download: true,
     lyrics: false,
     format: r.filetype ? String(r.filetype).toUpperCase() : undefined,
@@ -401,7 +415,7 @@ export const openverse: Provider = {
   prefix: "ov",
   name: "Openverse",
   description: "Openly licensed music from Wikimedia Commons, Freesound and more",
-  can: { preview: true, download: true, lyrics: false },
+  can: { preview: true, stream: true, download: true, lyrics: false },
   enabled: () => Deno.env.get("OPENVERSE_DISABLED") !== "1",
   search: (q) =>
     cached(`ov|${q.toLowerCase().trim()}`, async () => {
@@ -424,6 +438,7 @@ export const openverse: Provider = {
       album: r.audio_set?.title ?? "",
       durationSec: typeof r.duration === "number" ? r.duration / 1000 : 0,
       previewUrl: r.url,
+      streamUrl: r.url,
       downloadUrl: r.url,
     };
   },

@@ -67,6 +67,9 @@ abstract class MusicSource {
 
   Future<PreviewAudio> getPreview(SourceTrack track) => throw const UnsupportedCapabilityException('preview');
 
+  /// Full-length audio to play over the internet, where the source allows it.
+  Uri? streamUri(String sourceTrackId) => null;
+
   Future<DownloadStream> openDownload(SourceTrack track, {int fromByte = 0}) =>
       throw const UnsupportedCapabilityException('download');
 

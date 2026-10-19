@@ -6,8 +6,9 @@ import '../data/storage/local_store.dart';
 
 enum LibrarySort { recent, title, artist }
 
-/// Everything stored on this device: downloaded + imported tracks, favorites,
-/// listening history and unlocked lyrics.
+/// Everything stored on this device: downloaded + imported tracks, online
+/// songs saved to playlists or favorites, listening history and unlocked
+/// lyrics.
 class LibraryRepository extends ChangeNotifier {
   LibraryRepository(this._store, this.files) {
     for (final v in _store.tracks.values) {
@@ -20,6 +21,13 @@ class LibraryRepository extends ChangeNotifier {
   final FileStore files;
   final Map<String, Track> _tracks = {};
 
+  /// Online songs (no file) the user saved or played. Kept apart from files
+  /// so Downloads, storage and the Library song list only count real files.
+  late final Map<String, Track> _online = {
+    for (final j in (_store.meta.get('online') as List? ?? const []))
+      if (Track.fromJson(j as Map) case final t) t.id: t,
+  };
+
   /// Every file on the device (Downloads screen).
   List<Track> get tracks => _sorted(_tracks.values.toList(), LibrarySort.recent);
 
@@ -31,8 +39,24 @@ class LibraryRepository extends ChangeNotifier {
     if (t != null) await add(t.copyWith(inLibrary: v));
   }
   bool get isEmpty => _tracks.isEmpty;
-  Track? byId(String id) => _tracks[id];
+
+  /// The downloaded copy when there is one, else the saved online song.
+  Track? byId(String id) => _tracks[id] ?? _online[id];
+
+  /// True only for songs with a file on this device.
   bool contains(String id) => _tracks.containsKey(id);
+
+  /// Remembers an online song so playlists, favorites and history can refer
+  /// to it. A downloaded copy always takes precedence (see [byId]).
+  Future<void> saveOnline(Track t) async {
+    assert(t.isOnline);
+    if (_online.containsKey(t.id)) return;
+    _online[t.id] = t;
+    await _saveOnline();
+    notifyListeners();
+  }
+
+  Future<void> _saveOnline() => _store.meta.put('online', [for (final t in _online.values) t.toJson()]);
   int get totalBytes => _tracks.values.fold(0, (a, t) => a + t.sizeBytes);
 
   List<Track> sorted(LibrarySort s) => _sorted(_tracks.values.where((t) => t.inLibrary).toList(), s);
@@ -75,9 +99,15 @@ class LibraryRepository extends ChangeNotifier {
   }
 
   Future<void> updateDuration(String id, Duration d) async {
-    final t = _tracks[id];
+    final t = byId(id);
     if (t == null || d == Duration.zero || (t.duration - d).abs() < const Duration(seconds: 1)) return;
-    await add(t.copyWith(duration: d));
+    if (t.isOnline) {
+      _online[id] = t.copyWith(duration: d);
+      await _saveOnline();
+      notifyListeners();
+    } else {
+      await add(t.copyWith(duration: d));
+    }
   }
 
   Future<void> remove(String id) async {
@@ -85,8 +115,11 @@ class LibraryRepository extends ChangeNotifier {
     if (t == null) return;
     await files.delete(t.fileKey);
     await _store.tracks.delete(id);
-    _favorites.remove(id);
-    _recent.remove(id);
+    // An online copy of the same song keeps its place in favorites/history.
+    if (!_online.containsKey(id)) {
+      _favorites.remove(id);
+      _recent.remove(id);
+    }
     await _saveMeta();
     notifyListeners();
   }
@@ -95,8 +128,9 @@ class LibraryRepository extends ChangeNotifier {
     await files.clear();
     await _store.tracks.clear();
     _tracks.clear();
-    _favorites.clear();
-    _recent.clear();
+    // Saved online songs aren't files; they stay, with their favorites.
+    _favorites.removeWhere((id) => !_online.containsKey(id));
+    _recent.removeWhere((id) => !_online.containsKey(id));
     await _saveMeta();
     notifyListeners();
   }
@@ -113,7 +147,7 @@ class LibraryRepository extends ChangeNotifier {
   }
 
   bool isFavorite(String id) => _favorites.contains(id);
-  List<Track> get favorites => [for (final id in _favorites) ?_tracks[id]];
+  List<Track> get favorites => [for (final id in _favorites) ?byId(id)];
 
   Future<void> toggleFavorite(String id) async {
     _favorites.contains(id) ? _favorites.remove(id) : _favorites.insert(0, id);
@@ -121,10 +155,10 @@ class LibraryRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<Track> get recentlyPlayed => [for (final id in _recent) ?_tracks[id]];
+  List<Track> get recentlyPlayed => [for (final id in _recent) ?byId(id)];
 
   Future<void> markPlayed(String id) async {
-    if (!_tracks.containsKey(id)) return;
+    if (byId(id) == null) return;
     _recent
       ..remove(id)
       ..insert(0, id);

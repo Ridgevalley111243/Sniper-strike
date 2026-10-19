@@ -96,11 +96,13 @@ class TrackRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.services;
     return ListenableBuilder(
-      listenable: Listenable.merge([s.player, s.library]),
+      listenable: Listenable.merge([s.player, s.library, s.network]),
       builder: (context, _) {
         final current = s.player.current?.id == track.id;
+        // Online songs can't play without the internet: show them dimmed.
+        final unreachable = s.player.needsInternet(track) && !s.network.isOnline;
         final meta = [track.artist, if (track.duration > Duration.zero) formatDuration(track.duration)].join(' · ');
-        return Material(
+        final row = Material(
           color: current ? AppColors.accent.withValues(alpha: 0.08) : Colors.transparent,
           borderRadius: BorderRadius.circular(Radii.md),
           clipBehavior: Clip.antiAlias,
@@ -129,7 +131,13 @@ class TrackRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: AppText.bodyMedium.copyWith(color: current ? AppColors.accent : AppColors.textPrimary)),
                     const SizedBox(height: 2),
-                    Text(meta, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.secondary.muted),
+                    Row(children: [
+                      if (s.player.needsInternet(track)) ...[
+                        const Icon(LucideIcons.cloud, size: 13, color: AppColors.textMuted, semanticLabel: 'Streams online'),
+                        const SizedBox(width: 4),
+                      ],
+                      Flexible(child: Text(meta, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.secondary.muted)),
+                    ]),
                   ]),
                 ),
                 if (showFavorite && s.library.isFavorite(track.id))
@@ -149,6 +157,7 @@ class TrackRow extends StatelessWidget {
             ),
           ),
         );
+        return unreachable ? Opacity(opacity: 0.45, child: row) : row;
       },
     );
   }
@@ -166,7 +175,9 @@ class ResultRow extends StatelessWidget {
     return ListenableBuilder(
       listenable: Listenable.merge([s.player, s.downloads, s.library]),
       builder: (context, _) {
-        final previewing = s.player.isPreviewing(g);
+        // Whole song when a source allows streaming; otherwise the preview.
+        final full = g.canStream;
+        final active = full ? s.player.isCurrent(g) : s.player.isPreviewing(g);
         final meta = '${g.artist} · ${formatDuration(g.duration)}';
         return InkWell(
           borderRadius: BorderRadius.circular(Radii.md),
@@ -187,19 +198,20 @@ class ResultRow extends StatelessWidget {
                     Text('Available from ${g.sources.length} sources', style: AppText.caption.secondaryColor),
                   ] else ...[
                     const SizedBox(height: 2),
-                    Text(g.primary.sourceName, style: AppText.caption.muted),
+                    Text([g.primary.sourceName, if (!g.canDownload) full ? 'Stream only' : 'Preview only'].join(' · '),
+                        style: AppText.caption.muted),
                   ],
                 ]),
               ),
-              if (g.canPreview)
+              if (full || g.canPreview)
                 CircleIconButton(
-                  icon: previewing && s.player.isPlaying ? LucideIcons.pause : LucideIcons.play,
-                  tooltip: previewing && s.player.isPlaying ? 'Pause preview' : 'Preview ${g.title}',
+                  icon: active && s.player.isPlaying ? LucideIcons.pause : LucideIcons.play,
+                  tooltip: active && s.player.isPlaying ? 'Pause' : (full ? 'Play ${g.title}' : 'Preview ${g.title}'),
                   size: 38,
                   iconSize: 16,
-                  background: previewing ? AppColors.accent : AppColors.surfaceSecondary,
-                  color: previewing ? AppColors.textOnAccent : AppColors.textPrimary,
-                  onPressed: () => s.player.playPreview(g),
+                  background: active ? AppColors.accent : AppColors.surfaceSecondary,
+                  color: active ? AppColors.textOnAccent : AppColors.textPrimary,
+                  onPressed: () => full ? s.player.playStream(g) : s.player.playPreview(g),
                 ),
               if (g.canDownload) DownloadControl(group: g),
               CircleIconButton(

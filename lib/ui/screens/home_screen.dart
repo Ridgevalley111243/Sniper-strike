@@ -57,7 +57,7 @@ class HomeScreen extends StatelessWidget {
               (LucideIcons.search, 'Search', 'Find new music', () => context.go('/search')),
               (LucideIcons.arrowDownToLine, 'Downloads', '${lib.tracks.length} tracks', () => context.go('/downloads')),
               (LucideIcons.listMusic, 'Playlists', '${s.playlists.all.length} playlists', () => context.go('/library?tab=playlists')),
-              (LucideIcons.heart, 'Favorites', '${lib.favorites.length} songs', () => context.push('/favorites')),
+              (LucideIcons.heart, 'Favorites', songCount(lib.favorites.length), () => context.push('/favorites')),
             ],
           )),
           gap(Space.xxl),

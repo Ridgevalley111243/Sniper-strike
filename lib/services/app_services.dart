@@ -67,7 +67,7 @@ class AppServices {
       library: library,
       playlists: playlists,
       search: MusicSearchController(sources),
-      player: PlayerController(library, files, sources, autoplayEnabled: () => settings.autoplay),
+      player: PlayerController(library, files, sources, autoplayEnabled: () => settings.autoplay, isOnline: () => network.isOnline),
       downloads: downloads,
       lyrics: LyricsService(sources, library, settings, ads),
       share: ShareService(files),

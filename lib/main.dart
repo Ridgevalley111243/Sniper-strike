@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -37,9 +39,22 @@ class TruHiveApp extends StatefulWidget {
 
 class _TruHiveAppState extends State<TruHiveApp> {
   late final GoRouter _router = buildRouter();
+  final _messenger = GlobalKey<ScaffoldMessengerState>();
+  late final StreamSubscription<String> _notices = widget.services.player.notices.listen((message) {
+    _messenger.currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 3)));
+  });
+
+  @override
+  void initState() {
+    super.initState();
+    _notices; // start listening
+  }
 
   @override
   void dispose() {
+    _notices.cancel();
     _router.dispose();
     super.dispose();
   }
@@ -55,6 +70,7 @@ class _TruHiveAppState extends State<TruHiveApp> {
         darkTheme: buildAppTheme(),
         themeMode: ThemeMode.dark,
         routerConfig: _router,
+        scaffoldMessengerKey: _messenger,
         builder: (context, child) => _KeyboardShortcuts(child: child ?? const SizedBox()),
       ),
     );

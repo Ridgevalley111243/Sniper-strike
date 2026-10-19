@@ -33,19 +33,21 @@ class SourceManager extends ChangeNotifier {
 
   /// Used until the backend's own list has been fetched once.
   static const _fallbackProviders = [
-    BackendProvider(id: 'jm', name: 'Jamendo', description: 'Independent artists · Creative Commons', download: true, lyrics: true),
-    BackendProvider(id: 'au', name: 'Audius', description: 'Independent artists · hip-hop, electronic, Afrobeats', download: true),
-    BackendProvider(id: 'cc', name: 'ccMixter', description: 'Creative Commons remixes and originals', download: true),
+    BackendProvider(id: 'jm', name: 'Jamendo', description: 'Independent artists · Creative Commons', stream: true, download: true, lyrics: true),
+    BackendProvider(id: 'au', name: 'Audius', description: 'Independent artists · hip-hop, electronic, Afrobeats', stream: true, download: true),
+    BackendProvider(id: 'cc', name: 'ccMixter', description: 'Creative Commons remixes and originals', stream: true, download: true),
     BackendProvider(
       id: 'ov',
       name: 'Openverse',
       description: 'Openly licensed music from Wikimedia Commons, Freesound and more',
+      stream: true,
       download: true,
     ),
     BackendProvider(
       id: 'ia',
       name: 'Internet Archive',
       description: 'Public domain, Creative Commons and live concert recordings',
+      stream: true,
       download: true,
     ),
     BackendProvider(id: 'it', name: 'Apple Music', description: 'Mainstream catalogue · 30-second previews', lyrics: true),

@@ -113,6 +113,11 @@ real providers in parallel and streams their audio to the device.
 | ccMixter (CC remixes and originals; a cappellas and samples skipped) | ✓ | ✓ | ✓ | — |
 | Openverse (CC music from Wikimedia Commons, Freesound and more) | ✓ | ✓ | ✓ | — |
 
+Songs a provider lets apps stream but not keep play in full over the internet ("Stream only");
+Apple Music stays a 30-second preview. Online songs can go into playlists and favorites — they're
+remembered on the device (metadata only), play over the internet, and are dimmed and skipped while
+offline. A download of the same song later takes over automatically.
+
 It is **stateless**: no database tables, no Storage. Songs pass through to the user's device and are
 never kept on the server; nothing about users is recorded.
 
@@ -139,10 +144,11 @@ backend that holds the keys and proxies the providers, then add its URL in
 | Endpoint | Response |
 | --- | --- |
 | `GET /api/health` | `200` when reachable |
-| `GET /api/sources` | `{"sources":[{"id","name","description","preview":bool,"download":bool,"lyrics":bool}]}` — optional; one app source per entry |
-| `GET /api/search?q=…[&provider=id]` | `{"results":[{"id","title","artist","album","durationMs","genre","year","artworkSeed","artworkUrl","provider","preview":bool,"download":bool,"lyrics":bool,"format","sizeBytes"}]}` |
+| `GET /api/sources` | `{"sources":[{"id","name","description","preview":bool,"stream":bool,"download":bool,"lyrics":bool}]}` — optional; one app source per entry |
+| `GET /api/search?q=…[&provider=id]` | `{"results":[{"id","title","artist","album","durationMs","genre","year","artworkSeed","artworkUrl","provider","preview":bool,"stream":bool,"download":bool,"lyrics":bool,"format","sizeBytes"}]}` |
 | `GET /api/art?u=…` | the cover image at `artworkUrl`, served with CORS |
 | `GET /api/preview/:id` | audio bytes (≈30 s clip) |
+| `GET /api/stream/:id` | full-length audio for playback over the internet (honour `Range` for seeking); only for results with `"stream": true` |
 | `GET /api/download/:id` | audio bytes; honour `Range: bytes=N-` with `206` + `Accept-Ranges: bytes` for resumable downloads |
 | `GET /api/lyrics/:id` | `{"provider","synced":bool,"lines":[{"timeMs","text"}]}` |
 

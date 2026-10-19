@@ -1,12 +1,17 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truhive/audio/synth.dart';
 import 'package:truhive/core/models/models.dart';
 import 'package:truhive/core/util/format.dart';
+import 'package:truhive/data/storage/file_store.dart';
+import 'package:truhive/data/storage/local_store.dart';
+import 'package:truhive/services/library_repository.dart';
 import 'package:truhive/services/search_controller.dart';
 import 'package:truhive/sources/backend_source.dart';
 import 'package:truhive/sources/demo/demo_source.dart';
@@ -207,4 +212,136 @@ void main() {
       expect(hits.single.sourceId, 'backend.it');
     });
   });
+
+  group('online songs', () {
+    late LibraryRepository lib;
+    final files = _MemoryFiles();
+
+    setUp(() async {
+      Hive.init(Directory.systemTemp.createTempSync('truhive').path);
+      final store = LocalStore.fromBoxes(
+        await Hive.openBox<dynamic>('tracks'),
+        await Hive.openBox<dynamic>('playlists'),
+        await Hive.openBox<dynamic>('meta'),
+      );
+      lib = LibraryRepository(store, files);
+    });
+    tearDown(() => Hive.close());
+
+    const src = SourceTrack(
+      sourceId: 'backend.au',
+      sourceName: 'Audius',
+      sourceTrackId: 'au:x1',
+      title: 'Night Drive',
+      artist: 'DJ Kofi',
+      album: '',
+      duration: Duration(minutes: 3),
+      artSeed: 'au:x1',
+      streamAvailable: true,
+    );
+
+    test('are saved apart from files and show up in favorites and history', () async {
+      final online = Track.online(src);
+      expect(online.isOnline, isTrue);
+      expect(online.id, src.localId);
+      await lib.saveOnline(online);
+      await lib.toggleFavorite(online.id);
+      await lib.markPlayed(online.id);
+      expect(lib.byId(online.id)?.isOnline, isTrue);
+      expect(lib.contains(online.id), isFalse, reason: 'not a file on this device');
+      expect(lib.tracks, isEmpty);
+      expect(lib.totalBytes, 0);
+      expect(lib.favorites.single.id, online.id);
+      expect(lib.recentlyPlayed.single.id, online.id);
+    });
+
+    test('a download of the same song takes over, and clearing files keeps the online song', () async {
+      final online = Track.online(src);
+      await lib.saveOnline(online);
+      await lib.toggleFavorite(online.id);
+      final file = Track(
+        id: src.localId,
+        title: src.title,
+        artist: src.artist,
+        album: '',
+        duration: src.duration,
+        artSeed: src.artSeed,
+        origin: TrackOrigin.download,
+        fileKey: 'k1',
+        fileName: 'night.mp3',
+        sizeBytes: 1000,
+        mimeType: 'audio/mpeg',
+        addedAt: DateTime(2026),
+        sourceId: src.sourceId,
+        sourceTrackId: src.sourceTrackId,
+      );
+      await lib.add(file);
+      expect(lib.byId(src.localId)?.isOnline, isFalse, reason: 'downloaded copy wins');
+      await lib.clearAll();
+      expect(lib.byId(src.localId)?.isOnline, isTrue);
+      expect(lib.isFavorite(src.localId), isTrue);
+    });
+
+    test('survive a restart', () async {
+      await lib.saveOnline(Track.online(src));
+      final store = LocalStore.fromBoxes(Hive.box<dynamic>('tracks'), Hive.box<dynamic>('playlists'), Hive.box<dynamic>('meta'));
+      final again = LibraryRepository(store, files);
+      expect(again.byId(src.localId)?.title, 'Night Drive');
+      expect(again.byId(src.localId)?.sourceTrackId, 'au:x1');
+    });
+
+    test('backend sources stream full songs where allowed', () {
+      final b = BackendSource(
+        'https://example.test/fn',
+        provider: const BackendProvider(id: 'au', name: 'Audius', stream: true, download: true),
+      );
+      expect(b.capabilities.stream, isTrue);
+      expect(b.streamUri('au:x1').toString(), 'https://example.test/fn/api/stream/au%3Ax1');
+      final apple = BackendSource('https://example.test/fn', provider: const BackendProvider(id: 'it', name: 'Apple Music'));
+      expect(apple.capabilities.stream, isFalse);
+    });
+
+    test('a group can stream when any source allows it', () {
+      final preview = SourceTrack(
+        sourceId: 'backend.it',
+        sourceName: 'Apple Music',
+        sourceTrackId: 'it:1',
+        title: src.title,
+        artist: src.artist,
+        album: '',
+        duration: src.duration,
+        artSeed: 'x',
+        previewAvailable: true,
+      );
+      final g = TrackGroup('k', [preview, src]);
+      expect(g.canStream, isTrue);
+      expect(g.streamSource, same(src));
+      expect(TrackGroup('k', [preview]).canStream, isFalse);
+    });
+  });
+}
+
+class _MemoryFiles implements FileStore {
+  @override
+  String get locationDescription => 'memory';
+  @override
+  bool get isBrowserStorage => false;
+  @override
+  Future<void> save(String key, Uint8List bytes) async {}
+  @override
+  Future<Uint8List?> read(String key) async => null;
+  @override
+  Future<bool> exists(String key) async => false;
+  @override
+  Future<void> delete(String key) async {}
+  @override
+  Future<void> clear() async {}
+  @override
+  Future<Uri> playableUri(String key, String mimeType) async => Uri.parse('file:///$key');
+  @override
+  Future<Uri> ephemeralUri(String name, Uint8List bytes, String mimeType) async => Uri.parse('file:///$name');
+  @override
+  Future<StorageInfo> info() async => const StorageInfo(usedByApp: 0);
+  @override
+  Future<bool> requestPersistence() async => true;
 }
