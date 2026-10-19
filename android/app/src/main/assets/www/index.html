@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f14">
+  <title>Sniper Strike</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="touch"></div>
+
+  <div id="hud" class="hidden">
+    <div id="hpBox">
+      <div class="hp-icon">✚</div>
+      <div class="bar"><div id="hpFill"></div><div id="hpGhost"></div></div>
+    </div>
+    <div id="objective"></div>
+    <div id="topCenter">
+      <div id="wave"></div>
+      <div id="hostiles"><span class="dot"></span><span id="hostileCount">0</span>&nbsp;HOSTILES</div>
+    </div>
+    <button id="pauseBtn" class="icon-btn" aria-label="Pause"><span></span><span></span></button>
+    <div id="banner"><div id="bannerTitle"></div><div id="bannerSub"></div></div>
+    <div id="hint"></div>
+    <div id="killfeed"></div>
+    <div id="crosshair"><i></i><i></i><i></i><i></i><b></b></div>
+    <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
+
+    <div id="scope">
+      <div class="lens"></div>
+      <svg viewBox="-100 -100 200 200" preserveAspectRatio="xMidYMid meet">
+        <g stroke="#0a0a0a" fill="none">
+          <line x1="-100" y1="0" x2="-30" y2="0" stroke-width="2.6"/>
+          <line x1="30" y1="0" x2="100" y2="0" stroke-width="2.6"/>
+          <line x1="0" y1="30" x2="0" y2="100" stroke-width="2.6"/>
+          <line x1="0" y1="-100" x2="0" y2="-30" stroke-width="2.6"/>
+          <line x1="-30" y1="0" x2="30" y2="0" stroke-width="0.45"/>
+          <line x1="0" y1="-30" x2="0" y2="30" stroke-width="0.45"/>
+        </g>
+        <g fill="#0a0a0a">
+          <circle cx="-8" cy="0" r="0.9"/><circle cx="-16" cy="0" r="0.9"/><circle cx="-24" cy="0" r="0.9"/>
+          <circle cx="8" cy="0" r="0.9"/><circle cx="16" cy="0" r="0.9"/><circle cx="24" cy="0" r="0.9"/>
+          <circle cx="0" cy="8" r="0.9"/><circle cx="0" cy="16" r="0.9"/><circle cx="0" cy="24" r="0.9"/>
+          <circle cx="0" cy="-8" r="0.9"/><circle cx="0" cy="-16" r="0.9"/><circle cx="0" cy="-24" r="0.9"/>
+        </g>
+        <circle cx="0" cy="0" r="0.75" fill="#ff2a1a"/>
+      </svg>
+      <div id="scopeInfo"><span id="zoomLabel">4.0x</span><span id="rangeLabel">--- m</span></div>
+      <div id="steady"><div id="steadyFill"></div></div>
+    </div>
+    <div id="zoomWrap"><div class="zl">+</div><input type="range" id="zoom" min="2" max="6" step="0.05" value="4"><div class="zl">−</div></div>
+
+    <div id="dmg"></div>
+    <div id="lowhp"></div>
+    <div id="indicators"></div>
+
+    <div id="ammo">
+      <div id="weaponName"></div>
+      <div class="row"><span id="ammoCount">30</span><span id="ammoMag">/30</span></div>
+      <div id="reloadBar"><div></div></div>
+    </div>
+    <button id="swapBtn" class="weapon-swap"><small>SWITCH</small><span id="swapName"></span></button>
+    <button id="reloadBtn" class="action small" aria-label="Reload">⟳</button>
+    <button id="peekBtn" class="action small">PEEK</button>
+    <button id="fireBtn" class="action fire"><span id="fireLabel">FIRE</span></button>
+  </div>
+
+  <div id="letterbox">
+    <div class="top"></div><div class="bottom"></div>
+    <div id="kcText"></div>
+    <div id="kcSkip">TAP TO SKIP</div>
+  </div>
+
+  <div id="menus">
+    <section id="scr-loading" class="screen">
+      <div class="loader"><div class="ring"></div><div id="loadText">DEPLOYING…</div></div>
+    </section>
+
+    <section id="scr-main" class="screen">
+      <div class="logo">
+        <div class="logo-top">SNIPER</div>
+        <div class="logo-bottom">STRIKE</div>
+        <div class="tag">TAKE COVER · AIM · ELIMINATE</div>
+      </div>
+      <div class="main-buttons">
+        <button class="btn primary" data-go="campaign">CAMPAIGN</button>
+        <button class="btn" data-go="armory">ARMORY</button>
+        <button class="btn" data-go="settings">SETTINGS</button>
+      </div>
+      <div class="coins"><span class="coin"></span><span class="coinVal">0</span></div>
+    </section>
+
+    <section id="scr-campaign" class="screen">
+      <header><button class="back" data-go="main">‹</button><h2>CAMPAIGN</h2><div class="coins"><span class="coin"></span><span class="coinVal">0</span></div></header>
+      <div id="missionList" class="cards"></div>
+    </section>
+
+    <section id="scr-briefing" class="screen">
+      <header><button class="back" data-go="campaign">‹</button><h2 id="briefTitle"></h2></header>
+      <div class="panel brief">
+        <div id="briefMeta" class="chips"></div>
+        <p id="briefText"></p>
+        <ul id="briefObj"></ul>
+        <div class="row-end"><button id="deployBtn" class="btn primary">DEPLOY</button></div>
+      </div>
+    </section>
+
+    <section id="scr-armory" class="screen">
+      <header><button class="back" data-go="main">‹</button><h2>ARMORY</h2><div class="coins"><span class="coin"></span><span class="coinVal">0</span></div></header>
+      <div id="upgradeList" class="upgrades"></div>
+    </section>
+
+    <section id="scr-settings" class="screen">
+      <header><button class="back" data-go="main">‹</button><h2>SETTINGS</h2></header>
+      <div class="panel settings">
+        <label>Graphics
+          <div class="seg" id="qualitySeg">
+            <button data-q="auto">AUTO</button><button data-q="low">LOW</button><button data-q="medium">MEDIUM</button><button data-q="high">HIGH</button>
+          </div>
+        </label>
+        <label>Aim sensitivity <input type="range" id="sensSlider" min="0.3" max="2.5" step="0.05"></label>
+        <label>Volume <input type="range" id="volSlider" min="0" max="1" step="0.05"></label>
+        <label class="inline">Show FPS <input type="checkbox" id="fpsToggle"></label>
+        <div class="row-end"><button id="resetBtn" class="btn danger">RESET PROGRESS</button></div>
+        <p class="help">Controls: drag anywhere to aim · hold <b>FIRE</b> to lean out and shoot, release to duck · <b>PEEK</b> keeps you out of cover · Sniper fires when you release FIRE.<br>Desktop: click to lock mouse, LMB fire, RMB peek, R reload, Q switch, wheel zoom, Esc pause.</p>
+      </div>
+    </section>
+
+    <section id="scr-pause" class="screen">
+      <div class="panel center">
+        <h2>PAUSED</h2>
+        <button class="btn primary" id="resumeBtn">RESUME</button>
+        <button class="btn" id="restartBtn">RESTART</button>
+        <button class="btn" id="quitBtn">QUIT MISSION</button>
+      </div>
+    </section>
+
+    <section id="scr-result" class="screen">
+      <div class="panel center result">
+        <h2 id="resTitle"></h2>
+        <div id="resStars" class="stars"></div>
+        <div id="resStats" class="stats"></div>
+        <div id="resCoins" class="earned"></div>
+        <div class="row-center">
+          <button class="btn" id="resMenu">MENU</button>
+          <button class="btn" id="resRetry">RETRY</button>
+          <button class="btn primary" id="resNext">NEXT</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="rotate">↻ Rotate your device to landscape</div>
+  <div id="fps"></div>
+</div>
+<script type="module" src="game.js"></script>
+</body>
+</html>
