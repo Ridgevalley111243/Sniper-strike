@@ -63,6 +63,10 @@ class PlayerController extends ChangeNotifier {
 
   List<Track> _queue = [];
 
+  /// Bumped on every new play request; a load that finishes after a newer
+  /// request started is discarded, so the last song tapped is what plays.
+  int _request = 0;
+
   /// Problems worth telling the user about wherever they are (shown as a toast).
   Stream<String> get notices => _notices.stream;
   final _notices = StreamController<String>.broadcast();
@@ -137,6 +141,7 @@ class PlayerController extends ChangeNotifier {
 
   Future<void> playTracks(List<Track> tracks, {int start = 0, bool shuffle = false}) async {
     if (tracks.isEmpty) return;
+    final request = ++_request;
     previewGroup = null;
     previewSource = null;
     lastError = null;
@@ -154,13 +159,22 @@ class PlayerController extends ChangeNotifier {
     _queue = List.of(list);
     notifyListeners();
     try {
+      // Silence whatever is playing right away. Loading new audio while the
+      // old one plays doesn't reliably replace it (on the web the old song
+      // kept going and the new one never started).
+      await _player.stop();
       final sources = await Future.wait(_queue.map(_sourceFor));
+      if (request != _request) return; // a newer song was chosen meanwhile
       await _player.setShuffleModeEnabled(shuffle);
       await _player.setAudioSources(sources, initialIndex: start.clamp(0, sources.length - 1), initialPosition: Duration.zero);
+      if (request != _request) return;
       if (shuffle) await _player.shuffle();
       await _applyLoopMode();
       unawaited(_player.play());
+    } on PlayerInterruptedException {
+      // Superseded by a newer play request; nothing to report.
     } catch (e) {
+      if (request != _request) return;
       _fail(_queue.any(needsInternet) ? "This song couldn't be streamed. Check your connection." : 'This file could not be played.');
     }
   }
@@ -198,6 +212,7 @@ class PlayerController extends ChangeNotifier {
     }
     final source = _sources.byId(src.sourceId);
     if (source == null) return;
+    final request = ++_request;
     previewGroup = g;
     previewSource = src;
     previewLoading = true;
@@ -207,16 +222,20 @@ class PlayerController extends ChangeNotifier {
     try {
       await _player.stop();
       final clip = await source.getPreview(src);
-      if (previewSource != src) return; // user started another preview meanwhile
+      if (request != _request) return; // user picked another song meanwhile
       final uri = clip.uri ?? await _files.ephemeralUri('preview-${src.sourceId}-${src.sourceTrackId}.wav', clip.bytes!, clip.mimeType);
       await _player.setAudioSource(AudioSource.uri(uri,
           tag: MediaItem(
               id: 'preview:${src.localId}', title: g.title, artist: '${g.artist} · Preview', duration: clip.length, artUri: _artUri(g.artSeed))));
+      if (request != _request) return;
       await _player.setLoopMode(LoopMode.off);
       previewLoading = false;
       notifyListeners();
       unawaited(_player.play());
+    } on PlayerInterruptedException {
+      // Superseded by a newer play request.
     } catch (e) {
+      if (request != _request) return; // don't undo a newer song's state
       previewLoading = false;
       previewGroup = null;
       previewSource = null;
