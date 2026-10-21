@@ -1,0 +1,486 @@
+---
+import { getCollection } from 'astro:content';
+import FlowBackground from '../components/FlowBackground.astro';
+import Icon from '../components/Icon.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import Base from '../layouts/Base.astro';
+import { site } from '../site';
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+const featured = projects.filter((p) => p.data.featured).slice(0, 3);
+const tools = site.about.toolkit.flatMap((t) => t.tools);
+const building = projects.filter((p) => p.data.status === 'In development').slice(0, 2);
+---
+<Base overDark>
+  <!-- Hero -->
+  <section class="hero">
+    <FlowBackground />
+    <div class="container hero-inner">
+      <div class="copy">
+        <p class="pill"><span class="dot"></span>Trutech Business · Ghana</p>
+        <h1>Where ideas turn into <em>reality.</em></h1>
+        <p class="sub">{site.headline} {site.intro}</p>
+        <div class="actions">
+          <a class="btn btn-light" href={base + 'work/'}>See my work <Icon name="arrow" /></a>
+          <a class="btn btn-ghost" href={base + 'contact/'}>Start a project</a>
+        </div>
+      </div>
+      {
+        building.length > 0 && (
+          <aside class="now" aria-label="Currently building">
+            <p class="now-label">Currently building</p>
+            <ul>
+              {building.map((p) => (
+                <li>
+                  <a href={`${base}work/${p.id}/`}>
+                    <span class="now-title">{p.data.title}</span>
+                    <span class="now-meta">{p.data.category}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </aside>
+        )
+      }
+    </div>
+    <a class="scroll" href="#services" aria-label="Scroll to services"><span></span></a>
+  </section>
+
+  <!-- Toolkit marquee -->
+  <div class="marquee" aria-label="Tools and technologies">
+    <div class="track">
+      {[0, 1].map((copy) => (
+        <ul aria-hidden={copy === 1 ? 'true' : undefined}>
+          {tools.map((t) => <li>{t}</li>)}
+        </ul>
+      ))}
+    </div>
+  </div>
+
+  <!-- Services -->
+  <section class="section" id="services">
+    <div class="container">
+      <div class="section-head reveal">
+        <div>
+          <p class="eyebrow">What I do</p>
+          <h2>Technology and creativity, working together.</h2>
+        </div>
+        <a class="btn btn-ghost" href={base + 'services/'}>All services <Icon name="arrow" /></a>
+      </div>
+      <div class="grid grid-3">
+        {
+          site.services.map((s, i) => (
+            <article class="card service reveal" style={`transition-delay:${(i % 3) * 80}ms`}>
+              <span class="icon"><Icon name={s.icon} /></span>
+              <h3>{s.title}</h3>
+              <p class="muted">{s.text}</p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured work -->
+  <section class="section work-band">
+    <div class="container">
+      <div class="section-head reveal">
+        <div>
+          <p class="eyebrow">Selected work</p>
+          <h2>Systems, platforms and brands built for real needs.</h2>
+        </div>
+        <a class="btn btn-ghost" href={base + 'work/'}>View all work <Icon name="arrow" /></a>
+      </div>
+      <div class="grid grid-3">
+        {featured.map((p, i) => <ProjectCard project={p} index={i} />)}
+      </div>
+    </div>
+  </section>
+
+  <!-- About teaser -->
+  <section class="section dark about">
+    <div class="container about-grid">
+      <div class="reveal">
+        <p class="eyebrow">About</p>
+        <h2>One partner for your website, your system and your brand.</h2>
+        <p class="lead">{site.about.paragraphs[0]}</p>
+        <a class="btn btn-light" href={base + 'about/'}>More about me <Icon name="arrow" /></a>
+      </div>
+      <div class="stats reveal">
+        {
+          site.about.stats.map((s) => (
+            <div class="stat">
+              <span class="display">{s.value}</span>
+              <span class="muted">{s.label}</span>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Process -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head reveal">
+        <div>
+          <p class="eyebrow">How I work</p>
+          <h2>From the first conversation to long after launch.</h2>
+        </div>
+      </div>
+      <ol class="grid grid-4 steps">
+        {
+          site.process.map((s, i) => (
+            <li class="reveal" style={`transition-delay:${i * 80}ms`}>
+              <span class="num">{String(i + 1).padStart(2, '0')}</span>
+              <h3>{s.title}</h3>
+              <p class="muted">{s.text}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  {
+    site.testimonials.length > 0 && (
+      <section class="section">
+        <div class="container grid grid-3">
+          {site.testimonials.map((t) => (
+            <figure class="card reveal">
+              <blockquote>“{t.quote}”</blockquote>
+              <figcaption>
+                <strong>{t.name}</strong>
+                <span class="muted"> · {t.role}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <!-- CTA -->
+  <section class="cta-band">
+    <div class="container cta reveal">
+      <h2>Have an idea? Let’s turn it into reality.</h2>
+      <p class="lead">Tell me what you need, whether it’s a website, a system, a brand or help with your devices, and I’ll get back to you.</p>
+      <a class="btn btn-light" href={base + 'contact/'}>Start a project <Icon name="arrow" /></a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* Hero */
+  .hero {
+    position: relative;
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    color: var(--mist-50);
+    padding-block: 120px 96px;
+    overflow: hidden;
+  }
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 48px;
+    align-items: end;
+  }
+  @media (min-width: 1024px) {
+    .hero-inner {
+      grid-template-columns: 1fr 320px;
+    }
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    margin-bottom: 28px;
+    border-radius: 999px;
+    border: 1px solid rgb(179 207 229 / 0.28);
+    background: rgb(179 207 229 / 0.1);
+    backdrop-filter: blur(10px);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--blue-200);
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--blue-200);
+    box-shadow: 0 0 0 0 rgb(179 207 229 / 0.6);
+    animation: pulse 2.4s infinite;
+  }
+  @keyframes pulse {
+    70% {
+      box-shadow: 0 0 0 10px rgb(179 207 229 / 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgb(179 207 229 / 0);
+    }
+  }
+  h1 {
+    font-size: clamp(3rem, 9vw, 7.4rem);
+    max-width: 11ch;
+    margin-bottom: 0.3em;
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--blue-200);
+  }
+  .sub {
+    max-width: 58ch;
+    font-size: clamp(1.02rem, 1.5vw, 1.2rem);
+    color: #c4d6e6;
+    margin-bottom: 36px;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .hero .btn-ghost {
+    color: var(--mist-50);
+    border-color: rgb(179 207 229 / 0.5);
+  }
+  .now {
+    padding: 22px;
+    border-radius: var(--radius);
+    border: 1px solid rgb(179 207 229 / 0.22);
+    background: rgb(10 25 49 / 0.45);
+    backdrop-filter: blur(14px);
+  }
+  .now-label {
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--blue-200);
+    margin-bottom: 10px;
+  }
+  .now ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .now a {
+    display: grid;
+    gap: 2px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: background-color 0.2s;
+  }
+  .now a:hover {
+    background: rgb(179 207 229 / 0.1);
+  }
+  .now-title {
+    font-weight: 600;
+  }
+  .now-meta {
+    font-size: 0.82rem;
+    color: #a9c0d6;
+  }
+  .scroll {
+    position: absolute;
+    left: 50%;
+    bottom: 26px;
+    z-index: 1;
+    width: 28px;
+    height: 44px;
+    margin-left: -14px;
+    border: 1.5px solid rgb(179 207 229 / 0.5);
+    border-radius: 999px;
+  }
+  .scroll span {
+    position: absolute;
+    left: 50%;
+    top: 9px;
+    width: 4px;
+    height: 8px;
+    margin-left: -2px;
+    border-radius: 2px;
+    background: var(--blue-200);
+    animation: wheel 1.8s infinite;
+  }
+  @keyframes wheel {
+    to {
+      transform: translateY(14px);
+      opacity: 0;
+    }
+  }
+
+  /* Marquee */
+  .marquee {
+    overflow: hidden;
+    background: var(--navy-800);
+    color: var(--blue-200);
+    padding-block: 18px;
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .track {
+    display: flex;
+    width: max-content;
+    animation: marquee 48s linear infinite;
+  }
+  .marquee ul {
+    display: flex;
+    gap: 44px;
+    padding: 0 22px;
+    margin: 0;
+    list-style: none;
+    white-space: nowrap;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+  .marquee li::before {
+    content: '✦';
+    margin-right: 44px;
+    color: var(--blue-500);
+  }
+  @keyframes marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .track {
+      animation: none;
+      flex-wrap: wrap;
+      width: auto;
+    }
+    .marquee ul[aria-hidden] {
+      display: none;
+    }
+    .marquee ul {
+      flex-wrap: wrap;
+      white-space: normal;
+      row-gap: 8px;
+    }
+  }
+
+  /* Services */
+  .service {
+    transition:
+      transform 0.3s var(--ease),
+      box-shadow 0.3s var(--ease),
+      border-color 0.3s;
+  }
+  .service:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
+    border-color: var(--blue-200);
+  }
+  .icon {
+    display: inline-grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 20px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--navy-950), var(--navy-800));
+    color: var(--blue-200);
+  }
+  .service p {
+    margin: 0;
+  }
+
+  .work-band {
+    background: linear-gradient(180deg, var(--mist-50), #eaf2f9);
+  }
+
+  /* About */
+  .about-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+  }
+  @media (min-width: 900px) {
+    .about-grid {
+      grid-template-columns: 1.3fr 1fr;
+    }
+  }
+  .about .lead {
+    margin-bottom: 32px;
+  }
+  .stats {
+    display: grid;
+    gap: 16px;
+  }
+  .stat {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    padding: 22px 26px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: rgb(26 61 99 / 0.35);
+  }
+  .stat .display {
+    font-size: clamp(2.6rem, 5vw, 3.6rem);
+    margin: 0;
+    color: var(--blue-200);
+    min-width: 1.4ch;
+  }
+
+  /* Process */
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: step;
+  }
+  .steps li {
+    padding-top: 22px;
+    border-top: 2px solid var(--border);
+    position: relative;
+  }
+  .steps li::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    width: 48px;
+    height: 2px;
+    background: var(--blue-500);
+  }
+  .num {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 2rem;
+    color: var(--blue-500);
+    margin-bottom: 10px;
+  }
+
+  blockquote {
+    margin: 0 0 16px;
+    font-size: 1.05rem;
+  }
+
+  /* CTA */
+  .cta-band {
+    padding: 0 var(--gutter) clamp(72px, 10vw, 120px);
+  }
+  .cta {
+    text-align: center;
+    padding: clamp(48px, 8vw, 96px) clamp(20px, 6vw, 80px);
+    border-radius: var(--radius-lg);
+    color: var(--mist-50);
+    background:
+      radial-gradient(80% 120% at 0% 0%, rgb(74 127 167 / 0.55), transparent 60%),
+      radial-gradient(70% 110% at 100% 100%, rgb(179 207 229 / 0.25), transparent 60%),
+      var(--navy-950);
+  }
+  .cta .lead {
+    color: #c4d6e6;
+    margin-inline: auto;
+    margin-bottom: 32px;
+  }
+</style>

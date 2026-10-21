@@ -1,0 +1,99 @@
+---
+import { site, whatsappLink } from '../site';
+import Icon from './Icon.astro';
+import Logo from './Logo.astro';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const year = new Date().getFullYear();
+---
+<footer class="dark">
+  <div class="container cols">
+    <div class="brand">
+      <Logo tone="light" />
+      <p class="muted">{site.tagline}</p>
+    </div>
+    <nav aria-label="Footer">
+      <h2 class="h">Explore</h2>
+      <ul>
+        <li><a href={base + 'work/'}>Work</a></li>
+        <li><a href={base + 'services/'}>Services</a></li>
+        <li><a href={base + 'about/'}>About</a></li>
+        <li><a href={base + 'contact/'}>Contact</a></li>
+      </ul>
+    </nav>
+    <div>
+      <h2 class="h">Get in touch</h2>
+      <ul>
+        {site.email && <li><a href={`mailto:${site.email}`}><Icon name="mail" size={18} /> {site.email}</a></li>}
+        {site.phone && <li><a href={`tel:${site.phone.replace(/\s/g, '')}`}><Icon name="phone" size={18} /> {site.phone}</a></li>}
+        {whatsappLink() && <li><a href={whatsappLink()}><Icon name="chat" size={18} /> WhatsApp</a></li>}
+        <li class="muted"><Icon name="pin" size={18} /> {site.location}</li>
+        <li><a href={base + 'contact/'}><Icon name="arrow" size={18} /> Send a message</a></li>
+      </ul>
+    </div>
+    {
+      site.socials.length > 0 && (
+        <div>
+          <h2 class="h">Follow</h2>
+          <ul>
+            {site.socials.map((s) => <li><a href={s.url} rel="me noopener" target="_blank">{s.label}</a></li>)}
+          </ul>
+        </div>
+      )
+    }
+  </div>
+  <div class="container legal muted">
+    <span>© {year} {site.brand}. All rights reserved.</span>
+  </div>
+</footer>
+<style>
+  footer {
+    padding-block: 72px 32px;
+  }
+  .cols {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 820px) {
+    .cols {
+      grid-template-columns: 1.6fr 1fr 1.4fr 1fr;
+    }
+  }
+  .brand p {
+    margin-top: 18px;
+    max-width: 30ch;
+  }
+  .h {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--blue-200);
+    margin-bottom: 14px;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+  }
+  li,
+  li a {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  li a:hover {
+    color: var(--blue-200);
+  }
+  .legal {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+</style>

@@ -1,0 +1,386 @@
+---
+// Private client deliveries. Each client gets a link like
+//   /client/#<id>.<key>
+// The page fetches that client's encrypted files from /c/<id>/ and decrypts
+// them in the browser with the key from the link. The key never reaches the
+// server (browsers don't send the part after #), and the repository only
+// holds encrypted data. Create deliveries with `npm run client`.
+import Icon from '../components/Icon.astro';
+import Logo from '../components/Logo.astro';
+import Base from '../layouts/Base.astro';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+<Base title="Client delivery" noindex bare>
+  <div class="shell" data-base={base}>
+    <header class="top">
+      <div class="container bar">
+        <a href={base} aria-label="Trutech Business home"><Logo tone="light" /></a>
+        <span class="secure"><Icon name="lock" size={16} /> Private &amp; encrypted</span>
+      </div>
+    </header>
+
+    <section class="container state" data-state="loading">
+      <div class="spinner" aria-hidden="true"></div>
+      <p role="status">Opening your files…</p>
+    </section>
+
+    <section class="container state" data-state="error" hidden>
+      <h1>We couldn’t open this delivery.</h1>
+      <p class="lead" data-error>Check that you used the complete link you were sent.</p>
+      <a class="btn btn-primary" href={base + 'contact/'}>Contact Trutech Business</a>
+    </section>
+
+    <section class="container delivery" data-state="ready" hidden>
+      <p class="eyebrow" data-field="client"></p>
+      <h1 data-field="project"></h1>
+      <div class="meta">
+        <span class="badge" data-field="status"></span>
+        <span class="muted" data-field="date"></span>
+      </div>
+      <p class="lead message" data-field="message"></p>
+      <div class="items" data-items></div>
+      <p class="foot muted">
+        These files were prepared for you by Trutech Business. Please don’t share this link: anyone with it can view
+        the files.
+      </p>
+    </section>
+  </div>
+
+  <template id="item-template">
+    <article class="item card">
+      <div class="preview"></div>
+      <div class="info">
+        <h2 class="title"></h2>
+        <p class="note muted"></p>
+        <div class="buttons"></div>
+      </div>
+    </article>
+  </template>
+</Base>
+
+<script>
+  type Item = {
+    title: string;
+    note?: string;
+    kind: 'image' | 'video' | 'pdf' | 'audio' | 'file' | 'link';
+    file?: string; // encrypted file name in /c/<id>/
+    name?: string; // original file name for downloads
+    mime?: string;
+    size?: number;
+    url?: string; // for kind "link"
+  };
+  type Manifest = { client: string; project: string; message?: string; status?: string; date?: string; items: Item[] };
+
+  const shell = document.querySelector<HTMLElement>('.shell')!;
+  const base = shell.dataset.base!;
+  const show = (state: string) =>
+    document.querySelectorAll<HTMLElement>('[data-state]').forEach((el) => (el.hidden = el.dataset.state !== state));
+  const fail = (message: string) => {
+    document.querySelector('[data-error]')!.textContent = message;
+    show('error');
+  };
+
+  const fromB64Url = (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+
+  async function decrypt(key: CryptoKey, data: ArrayBuffer): Promise<ArrayBuffer> {
+    const bytes = new Uint8Array(data);
+    return crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.slice(0, 12) }, key, bytes.slice(12));
+  }
+
+  const formatSize = (n?: number) =>
+    !n ? '' : n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
+
+  function button(label: string, primary = false) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `btn ${primary ? 'btn-primary' : 'btn-ghost'}`;
+    b.textContent = label;
+    return b;
+  }
+
+  async function main() {
+    const [id, keyText] = location.hash.slice(1).split('.');
+    if (!id || !keyText || !/^[A-Za-z0-9_-]+$/.test(id)) return fail('This link is incomplete. Please use the full link you were sent.');
+    if (!window.crypto?.subtle) return fail('Your browser can’t open encrypted files. Please try an up-to-date browser.');
+
+    let key: CryptoKey;
+    try {
+      key = await crypto.subtle.importKey('raw', fromB64Url(keyText), 'AES-GCM', false, ['decrypt']);
+    } catch {
+      return fail('This link is incomplete. Please use the full link you were sent.');
+    }
+
+    const folder = `${base}c/${id}/`;
+    let manifest: Manifest;
+    try {
+      const res = await fetch(folder + 'manifest.bin', { cache: 'no-store' });
+      if (!res.ok) return fail('This delivery is no longer available. It may have been replaced with a newer link.');
+      manifest = JSON.parse(new TextDecoder().decode(await decrypt(key, await res.arrayBuffer())));
+    } catch {
+      return fail('This link’s key doesn’t match. Please use the full link you were sent.');
+    }
+
+    const set = (field: string, value?: string) => {
+      const el = document.querySelector<HTMLElement>(`[data-field="${field}"]`)!;
+      el.textContent = value ?? '';
+      el.hidden = !value;
+    };
+    set('client', manifest.client);
+    set('project', manifest.project);
+    set('status', manifest.status);
+    set('date', manifest.date);
+    set('message', manifest.message);
+    document.title = `${manifest.project} · Trutech Business`;
+
+    // Decrypted files are cached per item, so previews and downloads reuse them.
+    const blobs = new Map<string, Promise<Blob>>();
+    const blobFor = (item: Item) => {
+      if (!blobs.has(item.file!)) {
+        blobs.set(
+          item.file!,
+          fetch(folder + item.file!)
+            .then((r) => {
+              if (!r.ok) throw new Error(`HTTP ${r.status}`);
+              return r.arrayBuffer();
+            })
+            .then((buf) => decrypt(key, buf))
+            .then((plain) => new Blob([plain], { type: item.mime || 'application/octet-stream' })),
+        );
+      }
+      return blobs.get(item.file!)!;
+    };
+
+    const list = document.querySelector<HTMLElement>('[data-items]')!;
+    const template = document.querySelector<HTMLTemplateElement>('#item-template')!;
+    for (const item of manifest.items) {
+      const node = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
+      node.querySelector('.title')!.textContent = item.title;
+      const note = node.querySelector<HTMLElement>('.note')!;
+      note.textContent = [item.note, item.kind !== 'link' ? formatSize(item.size) : ''].filter(Boolean).join(' · ');
+      const preview = node.querySelector<HTMLElement>('.preview')!;
+      const buttons = node.querySelector<HTMLElement>('.buttons')!;
+
+      if (item.kind === 'link' && item.url) {
+        preview.classList.add('icon-only');
+        preview.textContent = '↗';
+        const a = document.createElement('a');
+        a.className = 'btn btn-primary';
+        a.href = item.url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = 'Open link';
+        buttons.append(a);
+      } else if (item.file) {
+        if (item.kind === 'image') {
+          preview.classList.add('loading');
+          blobFor(item)
+            .then((blob) => {
+              const img = document.createElement('img');
+              img.alt = item.title;
+              img.src = URL.createObjectURL(blob);
+              preview.classList.remove('loading');
+              preview.append(img);
+            })
+            .catch(() => (preview.textContent = 'Preview unavailable'));
+        } else {
+          preview.classList.add('icon-only');
+          preview.textContent = item.kind === 'pdf' ? 'PDF' : item.kind === 'video' ? '▶' : item.kind === 'audio' ? '♪' : 'FILE';
+        }
+        if (item.kind === 'video' || item.kind === 'audio' || item.kind === 'pdf') {
+          const view = button(item.kind === 'pdf' ? 'View PDF' : 'Play', true);
+          view.addEventListener('click', async () => {
+            view.disabled = true;
+            view.textContent = 'Opening…';
+            try {
+              const url = URL.createObjectURL(await blobFor(item));
+              preview.classList.remove('icon-only');
+              preview.textContent = '';
+              const el =
+                item.kind === 'pdf'
+                  ? Object.assign(document.createElement('iframe'), { src: url, title: item.title })
+                  : Object.assign(document.createElement(item.kind), { src: url, controls: true, autoplay: true });
+              preview.append(el);
+              preview.classList.add('expanded');
+              view.remove();
+            } catch {
+              view.disabled = false;
+              view.textContent = 'Try again';
+            }
+          });
+          buttons.append(view);
+        }
+        const dl = button('Download');
+        dl.addEventListener('click', async () => {
+          dl.disabled = true;
+          dl.textContent = 'Preparing…';
+          try {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(await blobFor(item));
+            a.download = item.name || item.title;
+            a.click();
+            dl.textContent = 'Download';
+          } catch {
+            dl.textContent = 'Try again';
+          }
+          dl.disabled = false;
+        });
+        buttons.append(dl);
+      }
+      list.append(node);
+    }
+    show('ready');
+  }
+
+  main();
+</script>
+
+<style>
+  .shell {
+    min-height: 100svh;
+    background: var(--mist-50);
+  }
+  .top {
+    background: var(--navy-950);
+    color: var(--mist-50);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 76px;
+  }
+  .bar a {
+    text-decoration: none;
+  }
+  .secure {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--blue-200);
+  }
+  .state {
+    padding-block: 120px;
+    text-align: center;
+  }
+  .state .lead {
+    margin: 0 auto 28px;
+  }
+  .spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    border: 3px solid var(--border);
+    border-top-color: var(--blue-500);
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .delivery {
+    padding-block: clamp(48px, 7vw, 88px);
+  }
+  .delivery h1 {
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .badge {
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgb(74 127 167 / 0.14);
+    color: var(--navy-800);
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .message {
+    white-space: pre-line;
+    margin-bottom: 40px;
+  }
+  .items {
+    display: grid;
+    gap: 20px;
+  }
+  @media (min-width: 800px) {
+    .items {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  .item {
+    display: grid;
+    gap: 18px;
+    padding: 18px;
+  }
+  .item :global(.preview) {
+    display: grid;
+    place-items: center;
+    min-height: 200px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--navy-950), var(--navy-800));
+    color: var(--blue-200);
+    font: 600 1.4rem var(--font-body);
+    letter-spacing: 0.1em;
+  }
+  .item :global(.preview.loading) {
+    background: linear-gradient(100deg, #dfe9f3 30%, #eef4fa 50%, #dfe9f3 70%);
+    background-size: 200% 100%;
+    animation: shimmer 1.3s infinite;
+  }
+  @keyframes shimmer {
+    to {
+      background-position: -200% 0;
+    }
+  }
+  .item :global(.preview:has(img)) {
+    background: #eaf2f9;
+  }
+  .item :global(.preview img) {
+    width: 100%;
+    height: 100%;
+    max-height: 420px;
+    object-fit: contain;
+  }
+  .item :global(.preview.expanded) {
+    display: block;
+  }
+  .item :global(.preview iframe) {
+    width: 100%;
+    height: 520px;
+    border: 0;
+    background: #fff;
+  }
+  .item :global(.preview video),
+  .item :global(.preview audio) {
+    width: 100%;
+  }
+  .title {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+  }
+  .note {
+    font-size: 0.9rem;
+    margin-bottom: 14px;
+  }
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .foot {
+    margin-top: 48px;
+    font-size: 0.85rem;
+    max-width: 60ch;
+  }
+</style>
