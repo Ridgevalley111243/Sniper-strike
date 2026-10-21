@@ -1,16 +1,16 @@
 ---
-import { getCollection } from 'astro:content';
 import FlowBackground from '../components/FlowBackground.astro';
 import Icon from '../components/Icon.astro';
-import ProjectCard from '../components/ProjectCard.astro';
 import Base from '../layouts/Base.astro';
+import { projects } from '../lib/build-data';
+import { featuredOf, fingerprint } from '../lib/content';
+import { cardHTML } from '../lib/render';
 import { site } from '../site';
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
-const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
-const featured = projects.filter((p) => p.data.featured).slice(0, 3);
-const tools = site.about.toolkit.flatMap((t) => t.tools);
-const building = projects.filter((p) => p.data.status === 'In development').slice(0, 2);
+const featured = featuredOf(projects);
+const tools = [...new Set(site.about.toolkit.flatMap((t) => t.tools))];
+const building = projects.filter((p) => p.status === 'In development').slice(0, 2);
 ---
 <Base overDark>
   <!-- Hero -->
@@ -45,9 +45,9 @@ const building = projects.filter((p) => p.data.status === 'In development').slic
             <ul>
               {building.map((p) => (
                 <li>
-                  <a href={`${base}work/${p.id}/`}>
-                    <span class="now-title">{p.data.title}</span>
-                    <span class="now-meta">{p.data.category}</span>
+                  <a href={`${base}work/${p.slug}/`}>
+                    <span class="now-title">{p.title}</span>
+                    <span class="now-meta">{p.category}</span>
                   </a>
                 </li>
               ))}
@@ -104,20 +104,18 @@ const building = projects.filter((p) => p.data.status === 'In development').slic
         </div>
         <a class="btn btn-ghost" href={base + 'work/'}>View all work <Icon name="arrow" /></a>
       </div>
-      <div class="grid grid-3">
-        {featured.map((p, i) => <ProjectCard project={p} index={i} />)}
-      </div>
+      <div class="grid grid-3" data-featured data-fp={fingerprint(featured)} set:html={featured.map((p, i) => cardHTML(p, i, base)).join('')} />
     </div>
   </section>
 
   <!-- About teaser -->
-  <section class="section dark about">
+  <section class="section tint about">
     <div class="container about-grid">
       <div class="reveal">
         <p class="eyebrow">About</p>
         <h2>One partner for your website, your system and your brand.</h2>
         <p class="lead">{site.about.paragraphs[0]}</p>
-        <a class="btn btn-light" href={base + 'about/'}>More about me <Icon name="arrow" /></a>
+        <a class="btn btn-primary" href={base + 'about/'}>More about me <Icon name="arrow" /></a>
       </div>
       <div class="stats reveal">
         {
@@ -184,6 +182,9 @@ const building = projects.filter((p) => p.data.status === 'In development').slic
 </Base>
 
 <script>
+  import { liveFeatured } from '../scripts/live';
+  liveFeatured(document.querySelector<HTMLElement>('[data-featured]')!).catch(() => {});
+
   const reel = document.querySelector<HTMLVideoElement>('.reel');
   const toggle = document.querySelector<HTMLButtonElement>('.reel-toggle');
   if (reel && toggle) {
@@ -420,8 +421,9 @@ const building = projects.filter((p) => p.data.status === 'In development').slic
   /* Marquee */
   .marquee {
     overflow: hidden;
-    background: var(--navy-800);
-    color: var(--blue-200);
+    background: var(--surface-2);
+    color: var(--accent-strong);
+    border-block: 1px solid var(--border);
     padding-block: 18px;
     mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   }
@@ -521,12 +523,13 @@ const building = projects.filter((p) => p.data.status === 'In development').slic
     padding: 22px 26px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
-    background: rgb(26 61 99 / 0.35);
+    background: var(--surface);
+    box-shadow: var(--shadow);
   }
   .stat .display {
     font-size: clamp(2.6rem, 5vw, 3.6rem);
     margin: 0;
-    color: var(--blue-200);
+    color: var(--accent-strong);
     min-width: 1.4ch;
   }
 

@@ -3,8 +3,29 @@ import PageHero from '../components/PageHero.astro';
 import Base from '../layouts/Base.astro';
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 ---
-<Base title="Page not found" overDark noindex>
-  <PageHero eyebrow="404" title="This page didn’t grow here." lead="The link may be old or mistyped.">
-    <a class="btn btn-light" href={base}>Back to home</a>
-  </PageHero>
+<Base title="Page not found" noindex>
+  <div data-missing>
+    <PageHero eyebrow="404" title="This page didn’t grow here." lead="The link may be old or mistyped.">
+      <a class="btn btn-primary" href={base}>Back to home</a>
+    </PageHero>
+  </div>
+  <div data-project hidden></div>
 </Base>
+<script>
+  // A project added in the admin since the last deploy has no page yet:
+  // GitHub Pages serves this 404 page, which draws the project itself.
+  import { liveProject } from '../scripts/live';
+  const base = document.documentElement.dataset.base ?? '/';
+  const slug = location.pathname.startsWith(base) && location.pathname.slice(base.length).match(/^work\/([a-z0-9-]+)\/?$/)?.[1];
+  if (slug) {
+    const missing = document.querySelector<HTMLElement>('[data-missing]')!;
+    const el = document.querySelector<HTMLElement>('[data-project]')!;
+    missing.hidden = true;
+    el.hidden = false;
+    el.innerHTML = '<p class="container pd-head muted" role="status">Loading project…</p>';
+    liveProject(el, slug).catch(() => {
+      el.hidden = true;
+      missing.hidden = false;
+    });
+  }
+</script>

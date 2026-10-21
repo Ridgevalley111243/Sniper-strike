@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Content edited in the admin lives in Supabase. Pages show it at once in the
+  # browser; this rebuild bakes it into the static pages (and contact details
+  # into the footer), but only when something changed.
+  schedule:
+    - cron: '*/15 * * * *'
 
 permissions:
   contents: read
@@ -12,10 +17,31 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+env:
+  SUPABASE_URL: https://ypliibgdetwgbdlxjirg.supabase.co
+  # Public anon key (row level security only allows reading published content).
+  SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwbGlpYmdkZXR3Z2JkbHhqaXJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxNzAxNjQsImV4cCI6MjEwNzc0NjE2NH0.Ik9Rzgu0ILKq3l734kPGeNb5xouXXphUTp23Kw-g9mA
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.compare.outputs.build }}
+    steps:
+      - id: compare
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then echo "build=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          current=$(curl -fsS -X POST "$SUPABASE_URL/rest/v1/rpc/site_content_version" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Content-Type: application/json" -d '{}' | tr -d '"')
+          site=$(curl -fsS "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/content-version.txt?t=$(date +%s)" || true)
+          echo "Supabase: $current, site: $site"
+          if [ -n "$current" ] && [ "$current" != "$site" ]; then echo "build=true" >> "$GITHUB_OUTPUT"; else echo "build=false" >> "$GITHUB_OUTPUT"; fi
+
   build:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

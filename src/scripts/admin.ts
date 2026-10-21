@@ -1,0 +1,876 @@
+// The admin app (src/pages/admin.astro): sign-in, portfolio, client work,
+// settings and account. Everything is stored in Supabase; row level security
+// only lets accounts listed in site_admins change anything.
+import { createClient, type Session } from '@supabase/supabase-js';
+import { STATUSES, SUPABASE_ANON_KEY, SUPABASE_URL } from '../lib/content';
+import { esc } from '../lib/render';
+
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, storageKey: 'trutech-admin' },
+});
+
+const base = document.documentElement.dataset.base ?? '/';
+const SITE = location.origin + base;
+const MEDIA = 'site-media';
+const FILES = 'client-files';
+const MAX_CLIENT_FILE = 50 * 1024 * 1024; // the client-files bucket limit
+const ICONS = ['tiktok', 'x', 'whatsapp', 'instagram', 'facebook', 'youtube', 'pinterest', 'telegram', 'snapchat', 'threads'];
+const TYPES = ['Graphic design', 'Website', 'Web application', 'Management system', 'Digital commerce', 'Branding', 'Animation'];
+const DELIVERY_STATUS: Record<string, string> = {
+  awaiting_review: 'Awaiting review',
+  changes_requested: 'Changes requested',
+  approved: 'Approved',
+  delivered: 'Delivered',
+};
+
+/* ---------- helpers ---------- */
+
+const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector<T>(sel)!;
+const main = () => $('[data-main]');
+const attr = (v: unknown) => esc(String(v ?? ''));
+const date = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+const size = (n: number) => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
+const ext = (name: string) => (name.includes('.') ? name.split('.').pop()!.toUpperCase().slice(0, 6) : 'FILE');
+const slugify = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'project';
+const newToken = () => {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_');
+};
+const clientLink = (token: string) => `${SITE}client/#${token}`;
+
+let toastTimer: number | undefined;
+function toast(message: string, bad = false) {
+  const el = $('[data-toast]');
+  el.textContent = message;
+  el.classList.toggle('bad', bad);
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => (el.hidden = true), bad ? 6000 : 3500);
+}
+
+function friendly(error: unknown) {
+  const e = error as { message?: string; code?: string; status?: number };
+  if (e?.code === '23505') return 'Another project already uses this web address. Change the title or the address.';
+  if (e?.code === '42501' || e?.status === 403) return 'Your account isn’t allowed to do that. Try signing in again.';
+  if (e?.message?.includes('Failed to fetch')) return 'No connection. Check your internet and try again.';
+  return e?.message ?? 'Something went wrong. Please try again.';
+}
+
+function show(view: 'loading' | 'login' | 'password' | 'app') {
+  document.querySelectorAll<HTMLElement>('.adm > [data-view]').forEach((el) => (el.hidden = el.dataset.view !== view));
+}
+
+/** Upload with a progress callback (supabase-js uploads don't report progress). */
+async function upload(bucket: string, path: string, file: Blob, contentType: string, onProgress?: (fraction: number) => void) {
+  const { data } = await sb.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Your session has ended. Please sign in again.');
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/${bucket}/${path.split('/').map(encodeURIComponent).join('/')}`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY);
+    xhr.setRequestHeader('Content-Type', contentType || 'application/octet-stream');
+    xhr.setRequestHeader('x-upsert', 'false');
+    xhr.setRequestHeader('cache-control', 'max-age=31536000');
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve();
+      let message = `Upload failed (${xhr.status}).`;
+      try {
+        message = JSON.parse(xhr.responseText).message ?? message;
+      } catch {}
+      if (xhr.status === 413 || /size/i.test(message)) message = 'That file is too large to upload.';
+      if (/mime/i.test(message)) message = 'That file type can’t be used here.';
+      reject(new Error(message));
+    };
+    xhr.onerror = () => reject(new Error('Upload failed. Check your connection and try again.'));
+    xhr.send(file);
+  });
+}
+
+/** Photos from a phone are large: convert to WebP, at most 1600px wide. */
+async function optimiseImage(file: File): Promise<{ blob: Blob; type: string; ext: string }> {
+  if (file.type === 'image/gif' || file.type === 'image/svg+xml') return { blob: file, type: file.type, ext: file.type === 'image/gif' ? 'gif' : 'svg' };
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new Error(`“${file.name}” can’t be opened here. Please use a JPG, PNG or WebP image.`);
+  }
+  const scale = Math.min(1, 1600 / bitmap.width);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/webp', 0.84));
+  if (blob && blob.type === 'image/webp') return { blob, type: 'image/webp', ext: 'webp' };
+  const jpeg = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', 0.86));
+  if (!jpeg) throw new Error(`“${file.name}” couldn’t be converted.`);
+  return { blob: jpeg, type: 'image/jpeg', ext: 'jpg' };
+}
+
+async function uploadImage(file: File, onProgress?: (f: number) => void) {
+  const img = await optimiseImage(file);
+  const path = `projects/${crypto.randomUUID()}.${img.ext}`;
+  await upload(MEDIA, path, img.blob, img.type, onProgress);
+  return sb.storage.from(MEDIA).getPublicUrl(path).data.publicUrl;
+}
+
+/** Paths of images this site uploaded (not the ones that ship with the website). */
+const mediaPath = (url: string | null | undefined) => {
+  const marker = `/storage/v1/object/public/${MEDIA}/`;
+  return url && url.includes(marker) ? decodeURIComponent(url.split(marker)[1]) : null;
+};
+
+/* ---------- sign-in ---------- */
+
+let session: Session | null = null;
+
+async function enter() {
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+  if (!session) return show('login');
+  const { data: admin, error } = await sb.from('site_admins').select('email, must_change_password').maybeSingle();
+  if (error || !admin) {
+    await sb.auth.signOut();
+    session = null;
+    show('login');
+    const el = $('[data-login-error]');
+    el.textContent = 'This account doesn’t have access to the website admin.';
+    el.hidden = false;
+    return;
+  }
+  if (admin.must_change_password) return show('password');
+  show('app');
+  route();
+}
+
+function setupGate() {
+  $<HTMLFormElement>('[data-login]').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    const error = $('[data-login-error]');
+    const button = $<HTMLButtonElement>('button', form);
+    error.hidden = true;
+    button.disabled = true;
+    const data = new FormData(form);
+    const { error: err } = await sb.auth.signInWithPassword({
+      email: String(data.get('email')).trim(),
+      password: String(data.get('password')),
+    });
+    button.disabled = false;
+    if (err) {
+      error.textContent = /invalid/i.test(err.message) ? 'Wrong email or password.' : friendly(err);
+      error.hidden = false;
+      return;
+    }
+    form.reset();
+    enter();
+  });
+
+  $<HTMLFormElement>('[data-new-password]').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    const error = $('[data-password-error]');
+    const data = new FormData(form);
+    const password = String(data.get('password'));
+    error.hidden = true;
+    if (password.length < 10) return Object.assign(error, { hidden: false, textContent: 'Use at least 10 characters.' });
+    if (password !== data.get('confirm')) return Object.assign(error, { hidden: false, textContent: 'The passwords don’t match.' });
+    const { error: err } = await sb.auth.updateUser({ password });
+    if (err) return Object.assign(error, { hidden: false, textContent: friendly(err) });
+    await sb.rpc('site_password_changed');
+    form.reset();
+    toast('Password saved.');
+    enter();
+  });
+}
+
+/* ---------- router ---------- */
+
+async function route() {
+  if (!session) return;
+  const [section = 'projects', id] = location.hash.replace(/^#\/?/, '').split('/');
+  document.querySelectorAll<HTMLElement>('[data-nav]').forEach((a) =>
+    a.dataset.nav === section ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'),
+  );
+  main().innerHTML = '<p class="muted" role="status">Loading…</p>';
+  window.scrollTo(0, 0);
+  try {
+    if (section === 'projects') await (id ? projectForm(id) : projectList());
+    else if (section === 'clients') await (id ? clientDetail(id) : clientList());
+    else if (section === 'settings') await settingsForm();
+    else if (section === 'account') accountView();
+    else location.hash = '#/projects';
+  } catch (e) {
+    main().innerHTML = `<p class="error">${attr(friendly(e))}</p>`;
+  }
+}
+
+/* ---------- portfolio ---------- */
+
+async function projectList() {
+  const { data, error } = await sb
+    .from('site_projects')
+    .select('id, slug, title, category, status, featured, published, cover, sort_order')
+    .order('sort_order')
+    .order('created_at');
+  if (error) throw error;
+  const rows = data ?? [];
+  main().innerHTML = `
+    <div class="head"><div><h1>Portfolio</h1><p class="hint">Everything on the Work page. Changes show on the site straight away.</p></div>
+      <a class="btn btn-primary" href="#/projects/new">+ New project</a></div>
+    ${
+      rows.length
+        ? `<ul class="list">${rows
+            .map(
+              (p) => `<li><a class="row" href="#/projects/${p.id}">
+              ${p.cover ? `<img class="thumb" src="${attr(p.cover.startsWith('http') ? p.cover : base + p.cover.replace(/^\/+/, ''))}" alt="" loading="lazy" />` : '<span class="thumb" aria-hidden="true"></span>'}
+              <span><strong>${esc(p.title)}</strong><small>${esc(p.category || 'No type')} · ${esc(p.status)}</small></span>
+              <span class="pills">${p.featured ? '<span class="pill good">Home page</span>' : ''}${p.published ? '' : '<span class="pill warn">Hidden</span>'}<span class="pill muted">#${p.sort_order}</span></span>
+            </a></li>`,
+            )
+            .join('')}</ul>`
+        : '<p class="empty">No projects yet. Add your first one.</p>'
+    }`;
+}
+
+type GalleryItem = { src: string; alt: string };
+
+async function projectForm(id: string) {
+  const isNew = id === 'new';
+  let p: Record<string, any> = {
+    title: '',
+    slug: '',
+    client: '',
+    category: '',
+    year: new Date().getFullYear(),
+    status: 'Completed',
+    summary: '',
+    cover: null,
+    gallery: [],
+    services: [],
+    link: '',
+    featured: false,
+    published: true,
+    sort_order: 10,
+    body: '',
+  };
+  if (!isNew) {
+    const { data, error } = await sb.from('site_projects').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      main().innerHTML = '<p class="error">This project no longer exists.</p><p><a href="#/projects">Back to portfolio</a></p>';
+      return;
+    }
+    p = data;
+  }
+  const { data: cats } = await sb.from('site_projects').select('category');
+  const types = [...new Set([...TYPES, ...(cats ?? []).map((c) => c.category).filter(Boolean)])];
+  let cover: string | null = p.cover;
+  let gallery: GalleryItem[] = Array.isArray(p.gallery) ? p.gallery.map((g: GalleryItem) => ({ src: g.src, alt: g.alt ?? '' })) : [];
+  const uploaded: string[] = []; // uploaded while editing; deleted on save if no longer used
+  const imgSrc = (src: string) => (src.startsWith('http') ? src : base + src.replace(/^\/+/, ''));
+
+  main().innerHTML = `
+    <a class="crumb" href="#/projects">← Portfolio</a>
+    <div class="head"><h1>${isNew ? 'New project' : esc(p.title)}</h1>
+      ${isNew ? '' : `<a class="btn btn-ghost btn-sm" href="${base}work/${attr(p.slug)}/" target="_blank" rel="noopener">View on site ↗</a>`}</div>
+    <form data-project novalidate>
+      <section class="card panel"><h2>About the project</h2>
+        <div class="field"><label for="f-title">Title</label><input id="f-title" name="title" required maxlength="160" value="${attr(p.title)}" /></div>
+        <div class="two">
+          <div class="field"><label for="f-category">Type</label><input id="f-category" name="category" list="f-types" value="${attr(p.category)}" placeholder="e.g. Graphic design" />
+            <p class="hint">The part before “·” becomes a filter on the Work page, e.g. “Web application · EdTech”.</p>
+            <datalist id="f-types">${types.map((t) => `<option value="${attr(t)}"></option>`).join('')}</datalist></div>
+          <div class="field"><label for="f-client">Client</label><input id="f-client" name="client" maxlength="160" value="${attr(p.client)}" placeholder="Who it was for" /></div>
+        </div>
+        <div class="two">
+          <div class="field"><label for="f-status">Status</label><select id="f-status" name="status">${STATUSES.map((s) => `<option${s === p.status ? ' selected' : ''}>${s}</option>`).join('')}</select></div>
+          <div class="field"><label for="f-year">Year</label><input id="f-year" name="year" type="number" min="1990" max="2100" value="${attr(p.year)}" /></div>
+        </div>
+        <div class="field"><label for="f-summary">Short summary</label><textarea id="f-summary" name="summary" rows="3" maxlength="400" placeholder="One or two sentences for the project card.">${attr(p.summary)}</textarea></div>
+        <div class="field"><label for="f-link">Live link</label><input id="f-link" name="link" type="url" inputmode="url" value="${attr(p.link)}" placeholder="https://… (for websites and systems that are online)" /></div>
+        <div class="field"><label for="f-services">Services</label><input id="f-services" name="services" value="${attr((p.services ?? []).join(', '))}" placeholder="Logo design, Flyers, Supabase" /><p class="hint">Separate with commas.</p></div>
+      </section>
+
+      <section class="card panel"><h2>Cover image</h2>
+        <p class="hint">Shown on the project card and at the top of the project page. Without one, a branded cover is made for you.</p>
+        <div class="cover-box" data-cover></div>
+      </section>
+
+      <section class="card panel"><h2>Gallery</h2>
+        <p class="hint">Designs or screenshots shown on the project page. Add a short description to each, for people using screen readers.</p>
+        <div class="images" data-gallery></div>
+        <div class="actions"><label class="upload">+ Add images<input type="file" accept="image/*" multiple data-add-gallery /></label></div>
+        <div class="progress" data-progress hidden><span data-progress-text></span><progress max="1" value="0"></progress></div>
+      </section>
+
+      <section class="card panel"><h2>Project story</h2>
+        <div class="field"><label for="f-body">Story</label><textarea id="f-body" name="body" rows="12" placeholder="## The need&#10;What problem did the client have?&#10;&#10;## The work&#10;- What you made&#10;- How it helps">${attr(p.body)}</textarea>
+        <p class="hint">Start a line with “## ” for a heading, “- ” for a bullet, and wrap words in **double stars** for bold.</p></div>
+      </section>
+
+      <section class="card panel"><h2>On the site</h2>
+        <label class="check"><input type="checkbox" name="published"${p.published ? ' checked' : ''} /> Show on the website</label>
+        <label class="check"><input type="checkbox" name="featured"${p.featured ? ' checked' : ''} /> Show on the home page (Selected work shows the first three)</label>
+        <div class="two">
+          <div class="field"><label for="f-order">Order</label><input id="f-order" name="sort_order" type="number" value="${attr(p.sort_order)}" /><p class="hint">Lower numbers come first.</p></div>
+          <div class="field"><label for="f-slug">Web address</label><input id="f-slug" name="slug" value="${attr(p.slug)}" placeholder="made from the title" pattern="[a-z0-9-]+" /><p class="hint">${esc(SITE)}work/<b data-slug-preview>${esc(p.slug || '…')}</b>/</p></div>
+        </div>
+      </section>
+
+      <p class="error" role="alert" data-error hidden></p>
+      <div class="actions sticky-actions">
+        <button class="btn btn-primary" type="submit">${isNew ? 'Publish project' : 'Save changes'}</button>
+        <a class="btn btn-ghost" href="#/projects">Cancel</a>
+        ${isNew ? '' : '<button class="btn btn-danger" type="button" data-delete>Delete</button>'}
+      </div>
+    </form>`;
+
+  const form = $<HTMLFormElement>('[data-project]');
+  const slugInput = $<HTMLInputElement>('[name="slug"]', form);
+  const titleInput = $<HTMLInputElement>('[name="title"]', form);
+  let slugTouched = !isNew;
+  slugInput.addEventListener('input', () => {
+    slugTouched = true;
+    $('[data-slug-preview]').textContent = slugInput.value || '…';
+  });
+  titleInput.addEventListener('input', () => {
+    if (slugTouched) return;
+    slugInput.value = slugify(titleInput.value);
+    $('[data-slug-preview]').textContent = slugInput.value || '…';
+  });
+
+  const progress = (text: string | null, fraction = 0) => {
+    const box = $('[data-progress]');
+    box.hidden = text === null;
+    if (text !== null) {
+      $('[data-progress-text]').textContent = text;
+      $<HTMLProgressElement>('progress', box).value = fraction;
+    }
+  };
+
+  const drawCover = () => {
+    $('[data-cover]').innerHTML = `${cover ? `<img src="${attr(imgSrc(cover))}" alt="Cover preview" />` : ''}
+      <label class="upload">${cover ? 'Replace cover' : '+ Add cover'}<input type="file" accept="image/*" data-add-cover /></label>
+      ${cover ? '<button class="btn btn-ghost btn-sm" type="button" data-remove-cover>Remove</button>' : ''}`;
+  };
+  const drawGallery = () => {
+    $('[data-gallery]').innerHTML = gallery.length
+      ? gallery
+          .map(
+            (g, i) => `<div class="img-item" data-i="${i}"><img src="${attr(imgSrc(g.src))}" alt="" loading="lazy" />
+            <input aria-label="Description of image ${i + 1}" placeholder="Description" value="${attr(g.alt)}" data-alt />
+            <div class="tools"><button type="button" data-move="-1" aria-label="Move earlier"${i === 0 ? ' disabled' : ''}>←</button><button type="button" data-move="1" aria-label="Move later"${i === gallery.length - 1 ? ' disabled' : ''}>→</button><button type="button" data-remove aria-label="Remove image">✕</button></div></div>`,
+          )
+          .join('')
+      : '<p class="hint">No images yet.</p>';
+  };
+  drawCover();
+  drawGallery();
+
+  form.addEventListener('input', (e) => {
+    const t = e.target as HTMLInputElement;
+    if (t.matches('[data-alt]')) gallery[Number(t.closest<HTMLElement>('[data-i]')!.dataset.i)].alt = t.value;
+  });
+  form.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const item = t.closest<HTMLElement>('[data-i]');
+    if (t.matches('[data-remove-cover]')) {
+      cover = null;
+      drawCover();
+    } else if (item && t.matches('[data-remove]')) {
+      gallery.splice(Number(item.dataset.i), 1);
+      drawGallery();
+    } else if (item && t.matches('[data-move]')) {
+      const i = Number(item.dataset.i);
+      const j = i + Number(t.dataset.move);
+      [gallery[i], gallery[j]] = [gallery[j], gallery[i]];
+      drawGallery();
+    }
+  });
+  form.addEventListener('change', async (e) => {
+    const input = e.target as HTMLInputElement;
+    if (!input.files?.length || !(input.matches('[data-add-cover]') || input.matches('[data-add-gallery]'))) return;
+    const files = [...input.files];
+    const isCover = input.matches('[data-add-cover]');
+    input.value = '';
+    try {
+      for (const [n, file] of files.entries()) {
+        const label = `Uploading ${files.length > 1 ? `${n + 1} of ${files.length}: ` : ''}${file.name}`;
+        progress(label);
+        const url = await uploadImage(file, (f) => progress(label, f));
+        uploaded.push(url);
+        if (isCover) cover = url;
+        else gallery.push({ src: url, alt: '' });
+      }
+      isCover ? drawCover() : drawGallery();
+      toast(isCover ? 'Cover uploaded. Save to publish it.' : 'Images uploaded. Add descriptions, then save.');
+    } catch (err) {
+      toast(friendly(err), true);
+      if (!isCover) drawGallery();
+    } finally {
+      progress(null);
+    }
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const error = $('[data-error]');
+    error.hidden = true;
+    const data = new FormData(form);
+    const title = String(data.get('title')).trim();
+    const slug = slugify(String(data.get('slug')).trim() || title);
+    const link = String(data.get('link')).trim();
+    const fail = (message: string) => Object.assign(error, { hidden: false, textContent: message });
+    if (!title) return fail('Give the project a title.');
+    if (link && !/^https?:\/\//i.test(link)) return fail('The live link must start with https://');
+    const row = {
+      title,
+      slug,
+      client: String(data.get('client')).trim(),
+      category: String(data.get('category')).trim(),
+      year: Number(data.get('year')) || new Date().getFullYear(),
+      status: String(data.get('status')),
+      summary: String(data.get('summary')).trim(),
+      link: link || null,
+      services: String(data.get('services'))
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      cover,
+      gallery: gallery.map((g) => ({ src: g.src, alt: g.alt.trim() })),
+      body: String(data.get('body')).trim(),
+      published: data.get('published') === 'on',
+      featured: data.get('featured') === 'on',
+      sort_order: Number(data.get('sort_order')) || 0,
+    };
+    const button = $<HTMLButtonElement>('button[type="submit"]', form);
+    button.disabled = true;
+    const result = isNew ? await sb.from('site_projects').insert(row).select('id').single() : await sb.from('site_projects').update(row).eq('id', id).select('id').single();
+    button.disabled = false;
+    if (result.error) return fail(friendly(result.error));
+    // Images replaced or removed while editing are deleted from storage.
+    const kept = new Set([row.cover, ...row.gallery.map((g) => g.src)]);
+    const before = [p.cover, ...(Array.isArray(p.gallery) ? p.gallery.map((g: GalleryItem) => g.src) : []), ...uploaded];
+    const gone = [...new Set(before.filter((u) => u && !kept.has(u)).map(mediaPath).filter(Boolean))] as string[];
+    if (gone.length) await sb.storage.from(MEDIA).remove(gone);
+    uploaded.length = 0;
+    toast(row.published ? 'Saved. It’s live on the website.' : 'Saved. It’s hidden from the website.');
+    location.hash = '#/projects';
+  });
+
+  form.querySelector('[data-delete]')?.addEventListener('click', async () => {
+    if (!confirm(`Delete “${p.title}”? This can’t be undone.`)) return;
+    const { error } = await sb.from('site_projects').delete().eq('id', id);
+    if (error) return toast(friendly(error), true);
+    const paths = [p.cover, ...gallery.map((g) => g.src), ...uploaded].map(mediaPath).filter(Boolean) as string[];
+    if (paths.length) await sb.storage.from(MEDIA).remove(paths);
+    toast('Project deleted.');
+    location.hash = '#/projects';
+  });
+}
+
+/* ---------- client work ---------- */
+
+async function clientList() {
+  const { data, error } = await sb
+    .from('site_deliveries')
+    .select('id, client_name, title, kind, status, active, created_at, site_delivery_files(count), site_delivery_reviews(count)')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  const rows = data ?? [];
+  main().innerHTML = `
+    <div class="head"><div><h1>Client work</h1><p class="hint">Private links where clients view their work, download files and send you their review.</p></div>
+      <a class="btn btn-primary" href="#/clients/new">+ New client link</a></div>
+    ${
+      rows.length
+        ? `<ul class="list">${rows
+            .map((d: any) => {
+              const files = d.site_delivery_files?.[0]?.count ?? 0;
+              const reviews = d.site_delivery_reviews?.[0]?.count ?? 0;
+              const tone = d.status === 'changes_requested' ? 'warn' : d.status === 'approved' || d.status === 'delivered' ? 'good' : '';
+              return `<li><a class="row no-thumb" href="#/clients/${d.id}">
+                <span><strong>${esc(d.title)}</strong><small>${esc(d.client_name)} · ${d.kind === 'delivery' ? 'Final delivery' : 'For review'} · ${files} file${files === 1 ? '' : 's'} · ${date(d.created_at)}</small></span>
+                <span class="pills">${d.active ? '' : '<span class="pill muted">Link off</span>'}${reviews ? `<span class="pill">${reviews} review${reviews === 1 ? '' : 's'}</span>` : ''}<span class="pill ${tone}">${DELIVERY_STATUS[d.status] ?? d.status}</span></span>
+              </a></li>`;
+            })
+            .join('')}</ul>`
+        : '<p class="empty">No client links yet. Create one to share work with a client.</p>'
+    }`;
+}
+
+function deliveryFields(d: Record<string, any>) {
+  return `
+    <div class="two">
+      <div class="field"><label for="c-name">Client name</label><input id="c-name" name="client_name" required maxlength="120" value="${attr(d.client_name)}" /></div>
+      <div class="field"><label for="c-phone">Client WhatsApp number</label><input id="c-phone" name="client_phone" inputmode="tel" value="${attr(d.client_phone)}" placeholder="e.g. 233201234567" /><p class="hint">Optional. With country code, so you can send them the link in one tap.</p></div>
+    </div>
+    <div class="field"><label for="c-title">Project title</label><input id="c-title" name="title" required maxlength="160" value="${attr(d.title)}" placeholder="e.g. Logo design for Hajia Samsia" /></div>
+    <div class="field"><label for="c-message">Message to the client</label><textarea id="c-message" name="message" rows="4" placeholder="Hello! Here is the first draft of your logo. Let me know what you think.">${attr(d.message)}</textarea></div>
+    <fieldset class="field"><legend>What is this link for?</legend>
+      <label class="check"><input type="radio" name="kind" value="review"${d.kind !== 'delivery' ? ' checked' : ''} /> Review: the client approves the work or asks for changes</label>
+      <label class="check"><input type="radio" name="kind" value="delivery"${d.kind === 'delivery' ? ' checked' : ''} /> Final delivery: the client downloads the files and leaves a review</label>
+    </fieldset>
+    <label class="check"><input type="checkbox" name="allow_download"${d.allow_download !== false ? ' checked' : ''} /> Allow downloads</label>
+    <div class="field"><label for="c-expires">Link stops working on</label><input id="c-expires" name="expires_at" type="date" value="${attr(d.expires_at ? d.expires_at.slice(0, 10) : '')}" /><p class="hint">Optional. Leave empty to keep the link working.</p></div>`;
+}
+
+function readDelivery(form: HTMLFormElement) {
+  const data = new FormData(form);
+  const expires = String(data.get('expires_at') ?? '');
+  return {
+    client_name: String(data.get('client_name')).trim(),
+    client_phone: String(data.get('client_phone')).replace(/\D/g, '') || null,
+    title: String(data.get('title')).trim(),
+    message: String(data.get('message')).trim(),
+    kind: String(data.get('kind')) === 'delivery' ? 'delivery' : 'review',
+    allow_download: data.get('allow_download') === 'on',
+    expires_at: expires ? new Date(`${expires}T23:59:59`).toISOString() : null,
+  };
+}
+
+async function clientDetail(id: string) {
+  if (id === 'new') {
+    main().innerHTML = `
+      <a class="crumb" href="#/clients">← Client work</a>
+      <div class="head"><h1>New client link</h1></div>
+      <form data-delivery novalidate><section class="card panel">${deliveryFields({ kind: 'review', allow_download: true })}</section>
+        <p class="hint">Next you’ll add the files: images, PDFs, videos, Affinity files, ZIPs or any other format.</p>
+        <p class="error" role="alert" data-error hidden></p>
+        <div class="actions"><button class="btn btn-primary" type="submit">Create link and add files</button><a class="btn btn-ghost" href="#/clients">Cancel</a></div></form>`;
+    const form = $<HTMLFormElement>('[data-delivery]');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const row = readDelivery(form);
+      const error = $('[data-error]');
+      if (!row.client_name || !row.title) return Object.assign(error, { hidden: false, textContent: 'Add the client’s name and the project title.' });
+      const { data, error: err } = await sb.from('site_deliveries').insert(row).select('id').single();
+      if (err) return Object.assign(error, { hidden: false, textContent: friendly(err) });
+      location.hash = `#/clients/${data.id}`;
+    });
+    return;
+  }
+
+  const [{ data: d, error }, { data: files }, { data: reviews }] = await Promise.all([
+    sb.from('site_deliveries').select('*').eq('id', id).maybeSingle(),
+    sb.from('site_delivery_files').select('*').eq('delivery_id', id).order('sort_order').order('created_at'),
+    sb.from('site_delivery_reviews').select('*').eq('delivery_id', id).order('created_at', { ascending: false }),
+  ]);
+  if (error) throw error;
+  if (!d) {
+    main().innerHTML = '<p class="error">This client link no longer exists.</p><p><a href="#/clients">Back to client work</a></p>';
+    return;
+  }
+  const link = clientLink(d.token);
+  const invite = `Hello ${d.client_name}, ${d.kind === 'delivery' ? 'your files are ready' : 'your work is ready for review'}: “${d.title}”.\n\nOpen your private link: ${link}`;
+  const wa = `https://wa.me/${d.client_phone ?? ''}?text=${encodeURIComponent(invite)}`;
+  const label = (r: any) => (r.decision === 'approve' ? (d.kind === 'delivery' ? 'Received' : 'Approved') : r.decision === 'changes' ? 'Requested changes' : 'Feedback');
+
+  main().innerHTML = `
+    <a class="crumb" href="#/clients">← Client work</a>
+    <div class="head"><div><h1>${esc(d.title)}</h1><p class="hint">${esc(d.client_name)} · created ${date(d.created_at)}${d.viewed_at ? ` · first opened ${date(d.viewed_at)}` : ' · not opened yet'}</p></div>
+      <span class="pill ${d.status === 'changes_requested' ? 'warn' : d.status === 'awaiting_review' ? '' : 'good'}">${DELIVERY_STATUS[d.status]}</span></div>
+
+    <section class="card panel"><h2>Private link</h2>
+      ${d.active ? '' : '<p class="error">This link is switched off. The client can’t open it.</p>'}
+      <div class="linkbox"><code data-link>${esc(link)}</code>
+        <div class="actions"><button class="btn btn-primary btn-sm" type="button" data-copy>Copy link</button>
+          <a class="btn btn-ghost btn-sm" href="${attr(wa)}" target="_blank" rel="noopener">Send on WhatsApp</a>
+          <a class="btn btn-ghost btn-sm" href="${attr(link)}" target="_blank" rel="noopener">Open</a></div></div>
+      <div class="actions">
+        <button class="btn btn-ghost btn-sm" type="button" data-toggle>${d.active ? 'Switch link off' : 'Switch link on'}</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-rotate>Make a new link</button>
+      </div>
+      <p class="hint">“Make a new link” stops the old link working, for example if it was shared by mistake.</p>
+    </section>
+
+    <section class="card panel"><h2>Files</h2>
+      <div class="list" data-files>${
+        (files ?? []).length
+          ? (files ?? [])
+              .map(
+                (f: any) => `<div class="file-row"><span class="ext">${esc(ext(f.name))}</span><div><strong>${esc(f.name)}</strong><small class="muted">${size(f.size)}</small></div>
+                <button class="btn btn-ghost btn-sm" type="button" data-remove-file="${f.id}" data-path="${attr(f.path)}">Remove</button></div>`,
+              )
+              .join('')
+          : '<p class="hint">No files yet.</p>'
+      }</div>
+      <div class="actions"><label class="upload">+ Add files<input type="file" multiple data-add-files /></label></div>
+      <p class="hint">Any format: JPG, PNG, PDF, MP4, Affinity (.af), ZIP and more. Up to 50 MB per file; for bigger files, share a Google Drive link in the message.</p>
+      <div class="progress" data-progress hidden><span data-progress-text></span><progress max="1" value="0"></progress></div>
+    </section>
+
+    <section class="card panel"><h2>Reviews from the client</h2>
+      ${
+        (reviews ?? []).length
+          ? `<ul class="reviews">${(reviews ?? [])
+              .map(
+                (r: any) => `<li class="${attr(r.decision)}"><p><strong>${esc(label(r))}</strong>${r.rating ? ` · ${'★'.repeat(r.rating)}` : ''} · ${esc(r.reviewer_name || d.client_name)} · ${date(r.created_at)}</p>${r.comment ? `<p>${esc(r.comment)}</p>` : ''}</li>`,
+              )
+              .join('')}</ul>`
+          : '<p class="hint">No reviews yet. When the client sends one, it appears here and opens in their WhatsApp to send to you.</p>'
+      }
+      <div class="field"><label for="c-status">Status</label><select id="c-status" data-status>${Object.entries(DELIVERY_STATUS)
+        .map(([k, v]) => `<option value="${k}"${k === d.status ? ' selected' : ''}>${v}</option>`)
+        .join('')}</select><p class="hint">Changes by itself when the client responds; set it here after you update the work.</p></div>
+    </section>
+
+    <form class="card panel" data-delivery novalidate><h2>Details</h2>${deliveryFields(d)}
+      <p class="error" role="alert" data-error hidden></p>
+      <div class="actions"><button class="btn btn-primary" type="submit">Save details</button><button class="btn btn-danger" type="button" data-delete>Delete link and files</button></div>
+    </form>`;
+
+  const progress = (text: string | null, fraction = 0) => {
+    const box = $('[data-progress]');
+    box.hidden = text === null;
+    if (text !== null) {
+      $('[data-progress-text]').textContent = text;
+      $<HTMLProgressElement>('progress', box).value = fraction;
+    }
+  };
+
+  $('[data-copy]').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      toast('Link copied.');
+    } catch {
+      getSelection()?.selectAllChildren($('[data-link]'));
+      toast('Select the link and copy it.');
+    }
+  });
+  $('[data-toggle]').addEventListener('click', async () => {
+    const { error } = await sb.from('site_deliveries').update({ active: !d.active }).eq('id', id);
+    if (error) return toast(friendly(error), true);
+    toast(d.active ? 'Link switched off.' : 'Link switched on.');
+    route();
+  });
+  $('[data-rotate]').addEventListener('click', async () => {
+    if (!confirm('Make a new link? The current link will stop working.')) return;
+    const { error } = await sb.from('site_deliveries').update({ token: newToken() }).eq('id', id);
+    if (error) return toast(friendly(error), true);
+    toast('New link made. Send it to the client.');
+    route();
+  });
+  $<HTMLSelectElement>('[data-status]').addEventListener('change', async (e) => {
+    const { error } = await sb.from('site_deliveries').update({ status: (e.target as HTMLSelectElement).value }).eq('id', id);
+    toast(error ? friendly(error) : 'Status updated.', Boolean(error));
+  });
+  $<HTMLInputElement>('[data-add-files]').addEventListener('change', async (e) => {
+    const input = e.target as HTMLInputElement;
+    const list = [...(input.files ?? [])];
+    input.value = '';
+    const tooBig = list.filter((f) => f.size > MAX_CLIENT_FILE);
+    if (tooBig.length) toast(`${tooBig.map((f) => f.name).join(', ')} ${tooBig.length === 1 ? 'is' : 'are'} over 50 MB. Share a Google Drive link instead.`, true);
+    const ok = list.filter((f) => f.size <= MAX_CLIENT_FILE);
+    let order = (files ?? []).length;
+    for (const [n, file] of ok.entries()) {
+      const label = `Uploading ${ok.length > 1 ? `${n + 1} of ${ok.length}: ` : ''}${file.name} (${size(file.size)})`;
+      try {
+        progress(label);
+        const path = `${id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]+/g, '_').slice(-80)}`;
+        await upload(FILES, path, file, file.type || 'application/octet-stream', (f) => progress(label, f));
+        const { error } = await sb.from('site_delivery_files').insert({
+          delivery_id: id,
+          path,
+          name: file.name,
+          size: file.size,
+          mime: file.type || 'application/octet-stream',
+          sort_order: order++,
+        });
+        if (error) {
+          await sb.storage.from(FILES).remove([path]);
+          throw error;
+        }
+      } catch (err) {
+        toast(`${file.name}: ${friendly(err)}`, true);
+      }
+    }
+    progress(null);
+    if (ok.length) {
+      toast('Files added. The client sees them on their link.');
+      route();
+    }
+  });
+  $('[data-files]').addEventListener('click', async (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-remove-file]');
+    if (!b || !confirm('Remove this file? The client will no longer see it.')) return;
+    const { error } = await sb.from('site_delivery_files').delete().eq('id', b.dataset.removeFile!);
+    if (error) return toast(friendly(error), true);
+    await sb.storage.from(FILES).remove([b.dataset.path!]);
+    toast('File removed.');
+    route();
+  });
+  const form = $<HTMLFormElement>('[data-delivery]');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const row = readDelivery(form);
+    const error = $('[data-error]', form);
+    if (!row.client_name || !row.title) return Object.assign(error, { hidden: false, textContent: 'Add the client’s name and the project title.' });
+    const { error: err } = await sb.from('site_deliveries').update(row).eq('id', id);
+    if (err) return Object.assign(error, { hidden: false, textContent: friendly(err) });
+    toast('Details saved.');
+    route();
+  });
+  $('[data-delete]').addEventListener('click', async () => {
+    if (!confirm(`Delete the link for “${d.title}” and all its files? This can’t be undone.`)) return;
+    const paths = (files ?? []).map((f: any) => f.path);
+    if (paths.length) await sb.storage.from(FILES).remove(paths);
+    const { error } = await sb.from('site_deliveries').delete().eq('id', id);
+    if (error) return toast(friendly(error), true);
+    toast('Client link deleted.');
+    location.hash = '#/clients';
+  });
+}
+
+/* ---------- settings ---------- */
+
+type Social = { label: string; handle: string; url: string; icon: string };
+
+async function settingsForm() {
+  const { data, error } = await sb.from('site_settings').select('data').eq('id', 1).maybeSingle();
+  if (error) throw error;
+  const s: Record<string, any> = data?.data ?? {};
+  let socials: Social[] = Array.isArray(s.socials) ? s.socials : [];
+  main().innerHTML = `
+    <div class="head"><div><h1>Settings</h1><p class="hint">Shown on the Contact page, the footer and the About page. Changes appear on the site within about 15 minutes.</p></div></div>
+    <form data-settings novalidate>
+      <section class="card panel"><h2>You</h2>
+        <div class="two">
+          <div class="field"><label for="s-owner">Your name</label><input id="s-owner" name="owner" value="${attr(s.owner)}" placeholder="Shown on the About page" /></div>
+          <div class="field"><label for="s-location">Location</label><input id="s-location" name="location" value="${attr(s.location ?? 'Ghana')}" /></div>
+        </div>
+      </section>
+      <section class="card panel"><h2>Contact</h2>
+        <div class="two">
+          <div class="field"><label for="s-email">Email</label><input id="s-email" name="email" type="email" value="${attr(s.email)}" /></div>
+          <div class="field"><label for="s-phone">Phone</label><input id="s-phone" name="phone" inputmode="tel" value="${attr(s.phone)}" placeholder="+233 59 757 8538" /></div>
+          <div class="field"><label for="s-wa">WhatsApp number</label><input id="s-wa" name="whatsapp" inputmode="tel" value="${attr(s.whatsapp)}" placeholder="233597578538" /><p class="hint">With country code. Client reviews and the contact form are sent here.</p></div>
+          <div class="field"><label for="s-waname">WhatsApp name</label><input id="s-waname" name="whatsappName" value="${attr(s.whatsappName)}" /></div>
+        </div>
+      </section>
+      <section class="card panel"><h2>Social links</h2><div class="socials" data-socials></div>
+        <div class="actions"><button class="btn btn-ghost btn-sm" type="button" data-add-social>+ Add social link</button></div></section>
+      <p class="error" role="alert" data-error hidden></p>
+      <div class="actions sticky-actions"><button class="btn btn-primary" type="submit">Save settings</button></div>
+    </form>`;
+  const draw = () => {
+    $('[data-socials]').innerHTML = socials.length
+      ? socials
+          .map(
+            (x, i) => `<div class="social" data-i="${i}">
+            <div class="field"><label>Network</label><input data-k="label" value="${attr(x.label)}" placeholder="TikTok" /></div>
+            <div class="field"><label>Handle</label><input data-k="handle" value="${attr(x.handle)}" placeholder="@trutech.business1" /></div>
+            <div class="field"><label>Profile link</label><input data-k="url" type="url" value="${attr(x.url)}" placeholder="https://…" /></div>
+            <div class="field"><label>Icon</label><select data-k="icon">${ICONS.map((ic) => `<option${ic === x.icon ? ' selected' : ''}>${ic}</option>`).join('')}</select></div>
+            <button class="btn btn-ghost btn-sm" type="button" data-remove-social>Remove</button></div>`,
+          )
+          .join('')
+      : '<p class="hint">No social links.</p>';
+  };
+  draw();
+  const form = $<HTMLFormElement>('[data-settings]');
+  form.addEventListener('input', (e) => {
+    const t = e.target as HTMLInputElement;
+    const i = t.closest<HTMLElement>('[data-i]')?.dataset.i;
+    if (i !== undefined && t.dataset.k) (socials[Number(i)] as Record<string, string>)[t.dataset.k] = t.value;
+  });
+  form.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    if (t.matches('[data-add-social]')) {
+      socials.push({ label: '', handle: '', url: '', icon: 'tiktok' });
+      draw();
+    } else if (t.matches('[data-remove-social]')) {
+      socials.splice(Number(t.closest<HTMLElement>('[data-i]')!.dataset.i), 1);
+      draw();
+    }
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = new FormData(form);
+    const error = $('[data-error]');
+    const bad = socials.find((x) => x.url && !/^https?:\/\//i.test(x.url));
+    if (bad) return Object.assign(error, { hidden: false, textContent: `The link for ${bad.label || 'a social network'} must start with https://` });
+    const next = {
+      ...s,
+      owner: String(f.get('owner')).trim(),
+      location: String(f.get('location')).trim() || 'Ghana',
+      email: String(f.get('email')).trim(),
+      phone: String(f.get('phone')).trim(),
+      whatsapp: String(f.get('whatsapp')).replace(/\D/g, ''),
+      whatsappName: String(f.get('whatsappName')).trim(),
+      socials: socials.filter((x) => x.url.trim()).map((x) => ({ ...x, url: x.url.trim() })),
+    };
+    const { error: err } = await sb.from('site_settings').update({ data: next }).eq('id', 1);
+    if (err) return Object.assign(error, { hidden: false, textContent: friendly(err) });
+    error.hidden = true;
+    socials = next.socials;
+    draw();
+    toast('Settings saved. The site updates within about 15 minutes.');
+  });
+}
+
+/* ---------- account ---------- */
+
+function accountView() {
+  main().innerHTML = `
+    <div class="head"><div><h1>Account</h1><p class="hint">Signed in as ${esc(session?.user.email ?? '')}</p></div></div>
+    <form class="card panel" data-change-password novalidate><h2>Change password</h2>
+      <div class="two">
+        <div class="field"><label for="a-new">New password</label><input id="a-new" name="password" type="password" autocomplete="new-password" minlength="10" required /></div>
+        <div class="field"><label for="a-confirm">Confirm password</label><input id="a-confirm" name="confirm" type="password" autocomplete="new-password" minlength="10" required /></div>
+      </div>
+      <p class="error" role="alert" data-error hidden></p>
+      <div class="actions"><button class="btn btn-primary" type="submit">Change password</button></div>
+    </form>
+    <section class="card panel"><h2>Sign out</h2><p class="hint">Sign out on shared phones and computers.</p>
+      <div class="actions"><button class="btn btn-ghost" type="button" data-signout>Sign out</button></div></section>
+    <section class="card panel"><h2>Opening the admin</h2>
+      <p class="hint">The admin isn’t linked on the website. To open it, long-press an empty part of any page on your phone, or double-click an empty part on a computer. You can also bookmark this page: ${esc(SITE)}admin/</p></section>`;
+  const form = $<HTMLFormElement>('[data-change-password]');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    const password = String(data.get('password'));
+    const error = $('[data-error]', form);
+    if (password.length < 10) return Object.assign(error, { hidden: false, textContent: 'Use at least 10 characters.' });
+    if (password !== data.get('confirm')) return Object.assign(error, { hidden: false, textContent: 'The passwords don’t match.' });
+    const { error: err } = await sb.auth.updateUser({ password });
+    if (err) return Object.assign(error, { hidden: false, textContent: friendly(err) });
+    error.hidden = true;
+    form.reset();
+    toast('Password changed.');
+  });
+  $('[data-signout]').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    session = null;
+    location.hash = '';
+    show('login');
+  });
+}
+
+/* ---------- start ---------- */
+
+export function initAdmin() {
+  setupGate();
+  window.addEventListener('hashchange', route);
+  sb.auth.onAuthStateChange((event, s) => {
+    session = s;
+    if (event === 'SIGNED_OUT') show('login');
+  });
+  enter().catch((e) => {
+    show('login');
+    const el = $('[data-login-error]');
+    el.textContent = friendly(e);
+    el.hidden = false;
+  });
+}

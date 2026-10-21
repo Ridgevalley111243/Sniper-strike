@@ -7,11 +7,12 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check",
-    "client": "node scripts/client.mjs"
+    "check": "astro check"
   },
   "dependencies": {
-    "astro": "7.4.1"
+    "@supabase/supabase-js": "2.117.2",
+    "astro": "7.4.1",
+    "marked": "18.1.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.11",

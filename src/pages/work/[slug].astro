@@ -1,0 +1,21 @@
+---
+import Base from '../../layouts/Base.astro';
+import { projects } from '../../lib/build-data';
+import { projectFingerprint, type Project } from '../../lib/content';
+import { projectHTML } from '../../lib/render';
+
+export function getStaticPaths() {
+  return projects.map((project, index) => ({ params: { slug: project.slug }, props: { project, index } }));
+}
+const { project, index } = Astro.props as { project: Project; index: number };
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const n = (index + 1) % projects.length;
+---
+<Base title={project.title} description={project.summary}>
+  <div data-project={project.slug} data-fp={projectFingerprint(projects, index)} set:html={projectHTML(project, index, base, { project: projects[n], index: n })} />
+</Base>
+<script>
+  import { liveProject } from '../../scripts/live';
+  const el = document.querySelector<HTMLElement>('[data-project]')!;
+  liveProject(el, el.dataset.project!).catch(() => {});
+</script>

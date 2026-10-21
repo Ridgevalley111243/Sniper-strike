@@ -1,8 +1,13 @@
 ---
 // Slow, flowing navy-to-mist shapes inspired by the brand palette artwork.
 // CSS only (no JS), paused entirely for visitors who prefer reduced motion.
+// tone="light" is the soft version used behind page titles.
+interface Props {
+  tone?: 'dark' | 'light';
+}
+const { tone = 'dark' } = Astro.props;
 ---
-<div class="flow" aria-hidden="true">
+<div class:list={['flow', tone]} aria-hidden="true">
   <span class="blob b1"></span>
   <span class="blob b2"></span>
   <span class="blob b3"></span>
@@ -24,6 +29,7 @@
     position: absolute;
     inset: 0;
     overflow: hidden;
+    pointer-events: none; /* decoration only; taps reach the page (and the hidden admin gesture) */
     background: radial-gradient(120% 90% at 80% 0%, #1a3d63 0%, #0a1931 55%, #07122a 100%);
   }
   .blob {
@@ -107,6 +113,45 @@
     to {
       stroke-dashoffset: -400;
     }
+  }
+  /* Light tone: white with a hint of the brand blues. */
+  .light {
+    background: linear-gradient(180deg, #f4f8fc 0%, #ffffff 100%);
+  }
+  .light .blob {
+    filter: blur(80px);
+  }
+  .light .b1 {
+    background: #b3cfe5;
+    opacity: 0.55;
+  }
+  .light .b2 {
+    background: #b3cfe5;
+    opacity: 0.4;
+  }
+  .light .b3,
+  .light .b4 {
+    background: #4a7fa7;
+    opacity: 0.12;
+  }
+  .light .lines {
+    opacity: 0.22;
+  }
+  .light .lines path {
+    stroke: #4a7fa7;
+  }
+  .light .grain {
+    background: linear-gradient(180deg, transparent 55%, #ffffff);
+  }
+  :global([data-theme='dark']) .light {
+    background: linear-gradient(180deg, #0c1d37 0%, #081427 100%);
+  }
+  :global([data-theme='dark']) .light .b1,
+  :global([data-theme='dark']) .light .b2 {
+    background: #1a3d63;
+  }
+  :global([data-theme='dark']) .light .grain {
+    background: linear-gradient(180deg, transparent 55%, #081427);
   }
   @media (prefers-reduced-motion: reduce) {
     .blob,
