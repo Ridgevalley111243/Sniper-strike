@@ -14,16 +14,16 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     </section>
 
     <section class="gate" data-view="login" hidden>
-      <form class="card gate-card" data-login>
+      <form class="card gate-card" data-login autocomplete="off">
         <Logo tone="light" />
         <h1>Admin sign in</h1>
         <div class="field">
           <label for="l-email">Email</label>
-          <input id="l-email" name="email" type="email" autocomplete="username" required />
+          <input id="l-email" name="email" type="email" autocomplete="off" autocapitalize="none" spellcheck="false" required readonly data-unlock />
         </div>
         <div class="field">
           <label for="l-password">Password</label>
-          <input id="l-password" name="password" type="password" autocomplete="current-password" required />
+          <input id="l-password" name="password" type="password" autocomplete="off" required readonly data-unlock />
         </div>
         <p class="error" role="alert" data-login-error hidden></p>
         <button class="btn btn-primary" type="submit">Sign in</button>

@@ -71,7 +71,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
           </div>
           <p class="error" role="alert" data-form-error hidden></p>
           <button class="btn btn-primary" type="submit" data-submit><Icon name="whatsapp" /> <span>Send feedback</span></button>
-          <p class="hint muted">Your feedback is saved and opens in WhatsApp, ready to send to Trutech Business.</p>
+          <p class="hint muted">Your feedback is saved and opens in WhatsApp, ready to send to Trutech Business. By sending it you agree to our <a href={base + 'terms/'}>Terms</a> and <a href={base + 'privacy/'}>Privacy Policy</a>.</p>
         </form>
         <div class="thanks" data-thanks hidden>
           <h3>Thank you! Your feedback is saved.</h3>
@@ -87,6 +87,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
       <p class="foot muted">
         These files were prepared for you by Trutech Business. Please don’t share this link: anyone with it can view them.
+        <a href={base + 'terms/'}>Terms</a> · <a href={base + 'privacy/'}>Privacy</a>
       </p>
     </main>
   </div>

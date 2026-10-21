@@ -65,6 +65,19 @@ function friendly(error: unknown) {
 
 function show(view: 'loading' | 'login' | 'password' | 'app') {
   document.querySelectorAll<HTMLElement>('.adm > [data-view]').forEach((el) => (el.hidden = el.dataset.view !== view));
+  if (view !== 'app') main().innerHTML = ''; // no admin data left on screen
+  if (view === 'login') lockLogin();
+}
+
+/** An empty sign-in form that the browser can't fill in by itself. The fields
+    stay read-only (which stops autofill) until they're touched or focused. */
+function lockLogin() {
+  const form = $<HTMLFormElement>('[data-login]');
+  form.reset();
+  form.querySelectorAll<HTMLInputElement>('[data-unlock]').forEach((input) => {
+    input.value = '';
+    input.readOnly = true;
+  });
 }
 
 /** Upload with a progress callback (supabase-js uploads don't report progress). */
@@ -163,6 +176,7 @@ function setupGate() {
     error.hidden = true;
     button.disabled = true;
     const data = new FormData(form);
+    $<HTMLInputElement>('#l-password').value = ''; // never left in the form
     const { error: err } = await sb.auth.signInWithPassword({
       email: String(data.get('email')).trim(),
       password: String(data.get('password')),
@@ -912,8 +926,8 @@ function accountView() {
   $('[data-signout]').addEventListener('click', async () => {
     await sb.auth.signOut();
     session = null;
-    location.hash = '';
-    show('login');
+    // A fresh page: nothing from the session stays in memory or in Back history.
+    location.replace(`${base}admin/`);
   });
 }
 
@@ -938,6 +952,15 @@ function setupGrowingFields() {
 }
 
 export function initAdmin() {
+  const unlock = (e: Event) => {
+    const t = e.target as HTMLInputElement;
+    if (t.matches?.('[data-unlock]')) t.readOnly = false;
+  };
+  ['pointerdown', 'touchstart', 'focusin'].forEach((type) => document.addEventListener(type, unlock, { passive: true }));
+  // Coming back with the Back button can restore an old page from memory.
+  addEventListener('pageshow', (e) => {
+    if (e.persisted && !session) show('login');
+  });
   setupGate();
   setupGrowingFields();
   window.addEventListener('hashchange', route);

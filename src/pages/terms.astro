@@ -1,0 +1,118 @@
+---
+import PageHero from '../components/PageHero.astro';
+import Base from '../layouts/Base.astro';
+import { site } from '../site';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const UPDATED = '21 October 2026';
+---
+<Base title="Terms of Service" description="The terms for using this website and working with Trutech Business.">
+  <PageHero eyebrow="Legal" title="Terms of Service" lead={`Last updated ${UPDATED}`} />
+  <section class="section">
+    <div class="container prose legal-text">
+      <p>
+        These terms apply when you use this website or hire {site.brand} (“we”, “us”) for websites, web applications,
+        management systems, graphic design, IT support or training. By using the website or accepting a quote, you
+        agree to them. Anything we agree with you in writing for a specific project, including by WhatsApp or email,
+        takes priority over these terms.
+      </p>
+
+      <h2>1. Projects and quotes</h2>
+      <ul>
+        <li>Before we start, we agree the scope, price and timeline of the project in writing.</li>
+        <li>Quotes are valid for 14 days unless they say otherwise.</li>
+        <li>Work outside the agreed scope is quoted and charged separately.</li>
+      </ul>
+
+      <h2>2. Payment</h2>
+      <ul>
+        <li>Unless we agree otherwise, a 50% deposit is due before work begins and the balance before final files are released or a site or system goes live.</li>
+        <li>Payments are in Ghana cedis by mobile money, bank transfer or an online payment link.</li>
+        <li>Fees for third-party services (domains, hosting, paid plugins, SMS or payment providers) are paid by you unless the quote includes them.</li>
+      </ul>
+
+      <h2>3. Your part</h2>
+      <ul>
+        <li>You provide the content, information and approvals we need, on time.</li>
+        <li>You confirm you have the right to use any logos, photos, text or data you give us.</li>
+        <li>Delays in providing content or feedback may move the delivery date.</li>
+      </ul>
+
+      <h2>4. Reviews, revisions and approval</h2>
+      <ul>
+        <li>We share drafts through a private link where you can view the work, request changes or approve it.</li>
+        <li>Each project includes two rounds of revisions unless we agree otherwise; further changes are charged.</li>
+        <li>Approving the work through your private link, WhatsApp or email confirms that it’s accepted.</li>
+      </ul>
+
+      <h2>5. Private links and files</h2>
+      <ul>
+        <li>Your private link is for you and your team. Please don’t share it publicly; anyone with the link can open it.</li>
+        <li>Files marked view only are for review. They may not be downloaded, copied, screenshotted or used until the work is approved and paid for.</li>
+        <li>Links may be switched off or set to expire. Please download your final files when you receive them; we keep them for a limited time (see our <a href={`${base}privacy/`}>Privacy Policy</a>).</li>
+      </ul>
+
+      <h2>6. Ownership</h2>
+      <ul>
+        <li>When the project is paid in full, you own the final approved deliverables made for you.</li>
+        <li>We keep ownership of drafts and unused concepts, and of our own tools, templates and reusable code, which we license to you for use in your project.</li>
+        <li>Fonts, stock images, plugins and other third-party materials stay under their own licences.</li>
+      </ul>
+
+      <h2>7. Our portfolio</h2>
+      <p>
+        We may show completed work in our portfolio and on social media, unless you ask us in writing not to. We never
+        show confidential information, private data or work that isn’t public yet.
+      </p>
+
+      <h2>8. Support</h2>
+      <p>
+        For websites and systems, we fix bugs in the work we delivered free of charge for 30 days after launch.
+        Ongoing maintenance, hosting management and new features are available by separate agreement.
+      </p>
+
+      <h2>9. Cancellation</h2>
+      <p>
+        Either of us can end a project by telling the other in writing. The deposit isn’t refundable once work has
+        started, and work completed up to the cancellation is charged.
+      </p>
+
+      <h2>10. Liability</h2>
+      <p>
+        We do our work with reasonable care and skill. We aren’t responsible for problems caused by third-party
+        services (such as hosting, payment providers or APIs), by changes made by others, or for indirect losses such
+        as lost profits. Our total liability for a project is limited to the amount you paid for it.
+      </p>
+
+      <h2>11. This website</h2>
+      <p>
+        The text, designs and images on this website belong to {site.brand} or to the clients they were made for. You
+        may not copy or reuse them without permission, or use the website in a way that harms it or others.
+      </p>
+
+      <h2>12. Law and changes</h2>
+      <p>
+        These terms are governed by the laws of Ghana. We may update them; the version on this page at the time you
+        accept a quote applies to that project.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions about these terms? Contact us
+        {site.email && <> at <a href={`mailto:${site.email}`}>{site.email}</a></>}
+        {site.phone && <> or {site.phone}</>}.
+      </p>
+    </div>
+  </section>
+</Base>
+<style>
+  .legal-text {
+    max-width: 72ch;
+  }
+  .legal-text h2 {
+    font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+    margin-top: 1.8em;
+  }
+  .legal-text li {
+    margin-bottom: 0.5em;
+  }
+</style>
