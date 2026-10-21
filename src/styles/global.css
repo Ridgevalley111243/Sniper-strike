@@ -86,6 +86,8 @@ body {
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Long words, emails and links wrap instead of running out of their box. */
+  overflow-wrap: break-word;
 }
 
 img,

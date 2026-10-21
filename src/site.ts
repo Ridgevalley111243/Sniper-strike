@@ -16,17 +16,17 @@ export const site = {
     paragraphs: [
       'I am a technology entrepreneur and digital solutions practitioner working across web development, software solutions, graphic design, IT support and educational technology.',
       'Through Trutech Business I use technology and creativity to build practical solutions for businesses, schools and individuals: responsive websites, database-driven management systems, administrative dashboards, payment and API integrations, and platforms for online services. I am also building TRU DATA, a digital commerce platform for mobile data bundles.',
-      'I also work in brand identity, promotional design, multimedia and AI-assisted content, computer hardware and troubleshooting, and as an ICT teacher. Everything I build starts from a real need: what problem it solves, how people will use it, and how it will be run and maintained.',
+      'I also work in brand identity and promotional design, computer hardware and troubleshooting, and as an ICT teacher. Everything I build starts from a real need: what problem it solves, how people will use it, and how it will be run and maintained.',
     ],
     stats: [
-      { value: '6', label: 'Service areas' },
+      { value: '5', label: 'Service areas' },
       { value: '4', label: 'Systems & platforms in progress' },
       { value: '2', label: 'Brands built: Trutech & TRU DATA' },
     ],
     roles: [
       { title: 'Web application developer', text: 'Dashboards, user accounts, records, databases and business workflows.' },
       { title: 'Technology entrepreneur', text: 'Digital services and online business models through Trutech Business and TRU DATA.' },
-      { title: 'Graphic designer & content creator', text: 'Branding, marketing graphics, image assets and multimedia for businesses and institutions.' },
+      { title: 'Graphic designer', text: 'Branding, marketing graphics and image assets for businesses and institutions.' },
       { title: 'IT support & problem-solver', text: 'Software errors, device compatibility, computer upgrades and installation problems.' },
       { title: 'Educational technology practitioner', text: 'Connecting computing to classroom teaching, school administration and learning materials.' },
     ],
@@ -34,7 +34,7 @@ export const site = {
       { area: 'Web development', tools: ['Visual Studio Code', 'HTML', 'CSS', 'JavaScript', 'Framer', 'GitHub Pages'] },
       { area: 'Backend & data', tools: ['Supabase', 'PostgreSQL', 'Authentication', 'Row Level Security'] },
       { area: 'Payments & integrations', tools: ['Paystack', 'Refer2Bundle API', 'AdSense', 'AdMob'] },
-      { area: 'Design & media', tools: ['Affinity by Canva', 'Framer', 'AI-assisted animation'] },
+      { area: 'Design', tools: ['Affinity by Canva', 'Framer'] },
       { area: 'Mobile & hardware', tools: ['Android APK workflows', 'Android SDK', 'Windows 11 diagnostics', 'RAM & SSD upgrades'] },
       { area: 'Vector & production', tools: ['Inkscape', 'Ink/Stitch', 'SVG'] },
     ],
@@ -65,12 +65,6 @@ export const site = {
       title: 'Branding & graphic design',
       text: 'Logos, brand identities, flyers, banners and event graphics with consistent colour and sharp, print-ready output.',
       points: ['Logos & brand identity', 'Flyers, banners & adverts', 'Photo editing & retouching'],
-    },
-    {
-      icon: 'design',
-      title: 'Animation & multimedia',
-      text: 'Animated presentations and promotional content, using storytelling and AI-assisted tools to explain ideas clearly.',
-      points: ['School & event presentations', 'Promotional animations', 'AI-assisted characters & scenes'],
     },
     {
       icon: 'support',

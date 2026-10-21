@@ -15,7 +15,7 @@ const MEDIA = 'site-media';
 const FILES = 'client-files';
 const MAX_CLIENT_FILE = 50 * 1024 * 1024; // the client-files bucket limit
 const ICONS = ['tiktok', 'x', 'whatsapp', 'instagram', 'facebook', 'youtube', 'pinterest', 'telegram', 'snapchat', 'threads'];
-const TYPES = ['Graphic design', 'Website', 'Web application', 'Management system', 'Digital commerce', 'Branding', 'Animation'];
+const TYPES = ['Graphic design', 'Website', 'Web application', 'Management system', 'Digital commerce', 'Branding'];
 const DELIVERY_STATUS: Record<string, string> = {
   awaiting_review: 'Awaiting review',
   changes_requested: 'Changes requested',
@@ -30,7 +30,8 @@ const main = () => $('[data-main]');
 const attr = (v: unknown) => esc(String(v ?? ''));
 const date = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 const size = (n: number) => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
-const ext = (name: string) => (name.includes('.') ? name.split('.').pop()!.toUpperCase().slice(0, 6) : 'FILE');
+const ext = (name: string) => (name.includes('.') ? name.split('.').pop()!.toUpperCase().slice(0, 8) : 'FILE');
+const oneLine = (v: FormDataEntryValue | null) => String(v ?? '').replace(/\s+/g, ' ').trim();
 const slugify = (s: string) =>
   s
     .toLowerCase()
@@ -117,9 +118,9 @@ async function optimiseImage(file: File): Promise<{ blob: Blob; type: string; ex
   return { blob: jpeg, type: 'image/jpeg', ext: 'jpg' };
 }
 
-async function uploadImage(file: File, onProgress?: (f: number) => void) {
+async function uploadImage(file: File, onProgress?: (f: number) => void, folder = 'projects') {
   const img = await optimiseImage(file);
-  const path = `projects/${crypto.randomUUID()}.${img.ext}`;
+  const path = `${folder}/${crypto.randomUUID()}.${img.ext}`;
   await upload(MEDIA, path, img.blob, img.type, onProgress);
   return sb.storage.from(MEDIA).getPublicUrl(path).data.publicUrl;
 }
@@ -286,20 +287,20 @@ async function projectForm(id: string) {
       ${isNew ? '' : `<a class="btn btn-ghost btn-sm" href="${base}work/${attr(p.slug)}/" target="_blank" rel="noopener">View on site ↗</a>`}</div>
     <form data-project novalidate>
       <section class="card panel"><h2>About the project</h2>
-        <div class="field"><label for="f-title">Title</label><input id="f-title" name="title" required maxlength="160" value="${attr(p.title)}" /></div>
+        <div class="field"><label for="f-title">Title</label><textarea class="grow" rows="1" id="f-title" name="title" required maxlength="160">${attr(p.title)}</textarea></div>
         <div class="two">
           <div class="field"><label for="f-category">Type</label><input id="f-category" name="category" list="f-types" value="${attr(p.category)}" placeholder="e.g. Graphic design" />
             <p class="hint">The part before “·” becomes a filter on the Work page, e.g. “Web application · EdTech”.</p>
             <datalist id="f-types">${types.map((t) => `<option value="${attr(t)}"></option>`).join('')}</datalist></div>
-          <div class="field"><label for="f-client">Client</label><input id="f-client" name="client" maxlength="160" value="${attr(p.client)}" placeholder="Who it was for" /></div>
+          <div class="field"><label for="f-client">Client</label><textarea class="grow" rows="1" id="f-client" name="client" maxlength="160" placeholder="Who it was for">${attr(p.client)}</textarea></div>
         </div>
         <div class="two">
           <div class="field"><label for="f-status">Status</label><select id="f-status" name="status">${STATUSES.map((s) => `<option${s === p.status ? ' selected' : ''}>${s}</option>`).join('')}</select></div>
           <div class="field"><label for="f-year">Year</label><input id="f-year" name="year" type="number" min="1990" max="2100" value="${attr(p.year)}" /></div>
         </div>
         <div class="field"><label for="f-summary">Short summary</label><textarea id="f-summary" name="summary" rows="3" maxlength="400" placeholder="One or two sentences for the project card.">${attr(p.summary)}</textarea></div>
-        <div class="field"><label for="f-link">Live link</label><input id="f-link" name="link" type="url" inputmode="url" value="${attr(p.link)}" placeholder="https://… (for websites and systems that are online)" /></div>
-        <div class="field"><label for="f-services">Services</label><input id="f-services" name="services" value="${attr((p.services ?? []).join(', '))}" placeholder="Logo design, Flyers, Supabase" /><p class="hint">Separate with commas.</p></div>
+        <div class="field"><label for="f-link">Live link</label><textarea class="grow" rows="1" id="f-link" name="link" inputmode="url" placeholder="https://…">${attr(p.link)}</textarea><p class="hint">For websites and systems that are online.</p></div>
+        <div class="field"><label for="f-services">Services</label><textarea class="grow" rows="1" id="f-services" name="services" placeholder="Logo design, Flyers, Supabase">${attr((p.services ?? []).join(', '))}</textarea><p class="hint">Separate with commas.</p></div>
       </section>
 
       <section class="card panel"><h2>Cover image</h2>
@@ -428,22 +429,22 @@ async function projectForm(id: string) {
     const error = $('[data-error]');
     error.hidden = true;
     const data = new FormData(form);
-    const title = String(data.get('title')).trim();
+    const title = oneLine(data.get('title'));
     const slug = slugify(String(data.get('slug')).trim() || title);
-    const link = String(data.get('link')).trim();
+    const link = oneLine(data.get('link')).replace(/\s+/g, '');
     const fail = (message: string) => Object.assign(error, { hidden: false, textContent: message });
     if (!title) return fail('Give the project a title.');
     if (link && !/^https?:\/\//i.test(link)) return fail('The live link must start with https://');
     const row = {
       title,
       slug,
-      client: String(data.get('client')).trim(),
+      client: oneLine(data.get('client')),
       category: String(data.get('category')).trim(),
       year: Number(data.get('year')) || new Date().getFullYear(),
       status: String(data.get('status')),
       summary: String(data.get('summary')).trim(),
       link: link || null,
-      services: String(data.get('services'))
+      services: oneLine(data.get('services'))
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
@@ -512,16 +513,17 @@ async function clientList() {
 function deliveryFields(d: Record<string, any>) {
   return `
     <div class="two">
-      <div class="field"><label for="c-name">Client name</label><input id="c-name" name="client_name" required maxlength="120" value="${attr(d.client_name)}" /></div>
+      <div class="field"><label for="c-name">Client name</label><textarea class="grow" rows="1" id="c-name" name="client_name" required maxlength="120">${attr(d.client_name)}</textarea></div>
       <div class="field"><label for="c-phone">Client WhatsApp number</label><input id="c-phone" name="client_phone" inputmode="tel" value="${attr(d.client_phone)}" placeholder="e.g. 233201234567" /><p class="hint">Optional. With country code, so you can send them the link in one tap.</p></div>
     </div>
-    <div class="field"><label for="c-title">Project title</label><input id="c-title" name="title" required maxlength="160" value="${attr(d.title)}" placeholder="e.g. Logo design for Hajia Samsia" /></div>
+    <div class="field"><label for="c-title">Project title</label><textarea class="grow" rows="1" id="c-title" name="title" required maxlength="160" placeholder="e.g. Logo design for Hajia Samsia">${attr(d.title)}</textarea></div>
     <div class="field"><label for="c-message">Message to the client</label><textarea id="c-message" name="message" rows="4" placeholder="Hello! Here is the first draft of your logo. Let me know what you think.">${attr(d.message)}</textarea></div>
     <fieldset class="field"><legend>What is this link for?</legend>
       <label class="check"><input type="radio" name="kind" value="review"${d.kind !== 'delivery' ? ' checked' : ''} /> Review: the client approves the work or asks for changes</label>
       <label class="check"><input type="radio" name="kind" value="delivery"${d.kind === 'delivery' ? ' checked' : ''} /> Final delivery: the client downloads the files and leaves a review</label>
     </fieldset>
     <label class="check"><input type="checkbox" name="allow_download"${d.allow_download !== false ? ' checked' : ''} /> Allow downloads</label>
+    <p class="hint">When off, files are view only: shown with the client’s name as a watermark, with no saving, printing or downloading, and hidden when the client switches away or opens a screenshot tool. No website can block screenshots completely, but this makes copies hard to take and marks them.</p>
     <div class="field"><label for="c-expires">Link stops working on</label><input id="c-expires" name="expires_at" type="date" value="${attr(d.expires_at ? d.expires_at.slice(0, 10) : '')}" /><p class="hint">Optional. Leave empty to keep the link working.</p></div>`;
 }
 
@@ -529,9 +531,9 @@ function readDelivery(form: HTMLFormElement) {
   const data = new FormData(form);
   const expires = String(data.get('expires_at') ?? '');
   return {
-    client_name: String(data.get('client_name')).trim(),
+    client_name: oneLine(data.get('client_name')),
     client_phone: String(data.get('client_phone')).replace(/\D/g, '') || null,
-    title: String(data.get('title')).trim(),
+    title: oneLine(data.get('title')),
     message: String(data.get('message')).trim(),
     kind: String(data.get('kind')) === 'delivery' ? 'delivery' : 'review',
     allow_download: data.get('allow_download') === 'on',
@@ -743,6 +745,11 @@ async function settingsForm() {
   let socials: Social[] = Array.isArray(s.socials) ? s.socials : [];
   main().innerHTML = `
     <div class="head"><div><h1>Settings</h1><p class="hint">Shown on the Contact page, the footer and the About page. Changes appear on the site within about 15 minutes.</p></div></div>
+    <section class="card panel"><h2>Profile photo</h2>
+      <p class="hint">Shown on the About page and the home page. It changes on the site as soon as you upload it.</p>
+      <div class="profile" data-photo></div>
+      <div class="progress" data-progress hidden><span data-progress-text></span><progress max="1" value="0"></progress></div>
+    </section>
     <form data-settings novalidate>
       <section class="card panel"><h2>You</h2>
         <div class="two">
@@ -763,6 +770,58 @@ async function settingsForm() {
       <p class="error" role="alert" data-error hidden></p>
       <div class="actions sticky-actions"><button class="btn btn-primary" type="submit">Save settings</button></div>
     </form>`;
+  // The photo is saved on its own, straight after upload, so it never waits
+  // for the rest of the form.
+  const drawPhoto = () => {
+    $('[data-photo]').innerHTML = `${s.photo ? `<img src="${attr(s.photo)}" alt="Your profile photo" />` : '<span class="avatar-empty" aria-hidden="true">No photo</span>'}
+      <div class="actions"><label class="upload">${s.photo ? 'Change photo' : '+ Upload photo'}<input type="file" accept="image/*" data-photo-input /></label>
+      ${s.photo ? '<button class="btn btn-ghost btn-sm" type="button" data-photo-remove>Remove</button>' : ''}</div>`;
+  };
+  const savePhoto = async (photo: string) => {
+    const { data: latest, error: readError } = await sb.from('site_settings').select('data').eq('id', 1).single();
+    if (readError) throw readError;
+    const { error: saveError } = await sb.from('site_settings').update({ data: { ...latest.data, photo } }).eq('id', 1);
+    if (saveError) throw saveError;
+    const old = mediaPath(s.photo);
+    s.photo = photo;
+    if (old) await sb.storage.from(MEDIA).remove([old]);
+    drawPhoto();
+  };
+  drawPhoto();
+  $('[data-photo]').addEventListener('change', async (e) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    const box = $('[data-progress]');
+    const label = `Uploading ${file.name}`;
+    box.hidden = false;
+    $('[data-progress-text]').textContent = label;
+    try {
+      const url = await uploadImage(file, (f) => ($<HTMLProgressElement>('progress', box).value = f), 'profile');
+      try {
+        await savePhoto(url);
+      } catch (err) {
+        await sb.storage.from(MEDIA).remove([mediaPath(url)!]);
+        throw err;
+      }
+      toast('Profile photo updated.');
+    } catch (err) {
+      toast(friendly(err), true);
+    } finally {
+      box.hidden = true;
+    }
+  });
+  $('[data-photo]').addEventListener('click', async (e) => {
+    if (!(e.target as HTMLElement).matches('[data-photo-remove]') || !confirm('Remove your profile photo from the website?')) return;
+    try {
+      await savePhoto('');
+      toast('Profile photo removed.');
+    } catch (err) {
+      toast(friendly(err), true);
+    }
+  });
+
   const draw = () => {
     $('[data-socials]').innerHTML = socials.length
       ? socials
@@ -770,7 +829,7 @@ async function settingsForm() {
             (x, i) => `<div class="social" data-i="${i}">
             <div class="field"><label>Network</label><input data-k="label" value="${attr(x.label)}" placeholder="TikTok" /></div>
             <div class="field"><label>Handle</label><input data-k="handle" value="${attr(x.handle)}" placeholder="@trutech.business1" /></div>
-            <div class="field"><label>Profile link</label><input data-k="url" type="url" value="${attr(x.url)}" placeholder="https://…" /></div>
+            <div class="field"><label>Profile link</label><textarea class="grow" rows="1" data-k="url" inputmode="url" placeholder="https://…">${attr(x.url)}</textarea></div>
             <div class="field"><label>Icon</label><select data-k="icon">${ICONS.map((ic) => `<option${ic === x.icon ? ' selected' : ''}>${ic}</option>`).join('')}</select></div>
             <button class="btn btn-ghost btn-sm" type="button" data-remove-social>Remove</button></div>`,
           )
@@ -808,7 +867,7 @@ async function settingsForm() {
       phone: String(f.get('phone')).trim(),
       whatsapp: String(f.get('whatsapp')).replace(/\D/g, ''),
       whatsappName: String(f.get('whatsappName')).trim(),
-      socials: socials.filter((x) => x.url.trim()).map((x) => ({ ...x, url: x.url.trim() })),
+      socials: socials.filter((x) => x.url.trim()).map((x) => ({ ...x, url: x.url.replace(/\s+/g, '') })),
     };
     const { error: err } = await sb.from('site_settings').update({ data: next }).eq('id', 1);
     if (err) return Object.assign(error, { hidden: false, textContent: friendly(err) });
@@ -860,8 +919,27 @@ function accountView() {
 
 /* ---------- start ---------- */
 
+/** One-line text boxes that grow to show long titles, names and links. */
+function setupGrowingFields() {
+  const size = (t: HTMLTextAreaElement) => {
+    t.style.height = 'auto';
+    t.style.height = `${t.scrollHeight + 3}px`;
+  };
+  document.addEventListener('input', (e) => e.target instanceof HTMLTextAreaElement && e.target.matches('.grow') && size(e.target));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target instanceof HTMLTextAreaElement && e.target.matches('.grow')) {
+      e.preventDefault();
+      e.target.form?.requestSubmit();
+    }
+  });
+  const all = () => document.querySelectorAll<HTMLTextAreaElement>('textarea.grow').forEach(size);
+  new MutationObserver(all).observe(main(), { childList: true, subtree: true });
+  addEventListener('resize', all);
+}
+
 export function initAdmin() {
   setupGate();
+  setupGrowingFields();
   window.addEventListener('hashchange', route);
   sb.auth.onAuthStateChange((event, s) => {
     session = s;

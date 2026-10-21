@@ -150,6 +150,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   function fileCard(f: FileItem, allowDownload: boolean) {
     const kind = kindOf(f);
     const url = f.url ? esc(f.url) : '';
+    if (!allowDownload) return protectedCard(f, kind, url);
     const preview =
       kind === 'image' && url
         ? `<a class="preview" href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="${esc(f.name)}" loading="lazy" /></a>`
@@ -160,9 +161,104 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
             : `<div class="preview icon"><span class="ext">${esc(ext(f.name))}</span></div>`;
     const actions = [
       kind === 'pdf' && url ? `<a class="btn btn-ghost" href="${url}" target="_blank" rel="noopener">View PDF</a>` : '',
-      allowDownload && f.download ? `<a class="btn btn-primary" href="${esc(f.download)}">Download</a>` : '',
+      f.download ? `<a class="btn btn-primary" href="${esc(f.download)}">Download</a>` : '',
     ].join('');
     return `<article class="file card">${preview}<div class="info"><h3 class="name">${esc(f.name)}</h3><p class="muted">${esc(ext(f.name))} · ${size(f.size)}</p><div class="actions">${actions}</div></div></article>`;
+  }
+
+  // View-only files (downloads off): shown inside the page with a watermark,
+  // without links to the files themselves. Websites can't block screenshots;
+  // this makes copies harder to take and marks the ones that are.
+  function protectedCard(f: FileItem, kind: string, url: string) {
+    const wm = '<div class="wm" aria-hidden="true"></div>';
+    const preview =
+      kind === 'image' && url
+        ? `<div class="preview guarded"><canvas data-image="${url}" role="img" aria-label="${esc(f.name)}"></canvas>${wm}</div>`
+        : kind === 'video' && url
+          ? `<div class="preview guarded"><video src="${url}" controls controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture preload="metadata"></video>${wm}</div>`
+          : kind === 'audio' && url
+            ? `<div class="preview icon">♪<audio src="${url}" controls controlslist="nodownload noplaybackrate" preload="none"></audio></div>`
+            : kind === 'pdf' && url
+              ? `<div class="preview guarded pdf" data-pdf="${url}"><span class="ext">PDF</span>${wm}</div>`
+              : `<div class="preview icon"><span class="ext">${esc(ext(f.name))}</span></div>`;
+    const action =
+      kind === 'pdf' && url
+        ? '<button class="btn btn-ghost" type="button" data-open-pdf>View PDF</button>'
+        : kind === 'file'
+          ? '<p class="note">View only: you’ll receive this file once the work is approved.</p>'
+          : '';
+    return `<article class="file card">${preview}<div class="info"><h3 class="name">${esc(f.name)}</h3><p class="muted">${esc(ext(f.name))} · ${size(f.size)} · view only</p><div class="actions">${action}</div></div></article>`;
+  }
+
+  function protect(d: Delivery) {
+    const shell = $('.shell');
+    shell.classList.add('protected');
+    const mark = `${d.client_name} · Trutech Business · ${date(new Date().toISOString())}`;
+    const tile = (color: string) =>
+      `url("data:image/svg+xml,${encodeURIComponent(
+        `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='180'><text x='10' y='110' transform='rotate(-24 160 90)' fill='${color}' font-family='Montserrat,Arial,sans-serif' font-size='15' font-weight='600'>${mark.replace(/[<&'"]/g, '')}</text></svg>`,
+      )}")`;
+    shell.style.setProperty('--wm', tile('rgba(255,255,255,0.42)'));
+    shell.style.setProperty('--wm-dark', tile('rgba(10,25,49,0.32)'));
+
+    // Images are drawn on a canvas with the watermark baked in, so there's no
+    // image to save, drag or open on its own.
+    document.querySelectorAll<HTMLCanvasElement>('canvas[data-image]').forEach((canvas) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, 1600 / img.naturalWidth);
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.font = `600 ${Math.max(14, Math.round(canvas.width / 34))}px Montserrat, Arial, sans-serif`;
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.strokeStyle = 'rgba(10,25,49,0.35)';
+        ctx.lineWidth = 1;
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(-0.42);
+        const step = Math.max(120, canvas.width / 5);
+        for (let y = -canvas.height; y < canvas.height; y += step) {
+          for (let x = -canvas.width; x < canvas.width; x += ctx.measureText(mark).width + 60) {
+            ctx.fillText(mark, x, y);
+            ctx.strokeText(mark, x, y);
+          }
+        }
+        ctx.restore();
+      };
+      img.src = canvas.dataset.image!;
+    });
+
+    // PDFs open inside the page, without the viewer's download toolbar.
+    $('[data-files]').addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest('[data-open-pdf]');
+      if (!b) return;
+      const box = b.closest('.file')!.querySelector<HTMLElement>('[data-pdf]')!;
+      box.innerHTML = `<iframe src="${esc(box.dataset.pdf!)}#toolbar=0&navpanes=0&statusbar=0" title="PDF preview"></iframe><div class="wm" aria-hidden="true"></div>`;
+      box.classList.add('expanded');
+      b.remove();
+    });
+
+    const files = $('[data-files]');
+    ['contextmenu', 'dragstart', 'copy'].forEach((type) => files.addEventListener(type, (e) => e.preventDefault()));
+    // Blur the files whenever the page isn't in front: switching apps, opening
+    // a screenshot or recording tool, or pressing Print Screen.
+    const shield = (on: boolean) => shell.classList.toggle('shielded', on);
+    addEventListener('blur', () => {
+      if (!(document.activeElement instanceof HTMLIFrameElement)) shield(true);
+    });
+    addEventListener('focus', () => shield(false));
+    document.addEventListener('visibilitychange', () => shield(document.hidden));
+    addEventListener('keyup', (e) => {
+      if (e.key !== 'PrintScreen') return;
+      shield(true);
+      navigator.clipboard?.writeText('').catch(() => {});
+      setTimeout(() => shield(false), 1500);
+    });
+    addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && ['s', 'p'].includes(e.key.toLowerCase())) e.preventDefault();
+    });
   }
 
   function history(reviews: Review[]) {
@@ -266,6 +362,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     $('[data-files]').innerHTML = d.files.length
       ? d.files.map((f) => fileCard(f, d.allow_download)).join('')
       : '<p class="muted">Files will appear here soon.</p>';
+    if (!d.allow_download) protect(d);
     history(d.reviews);
     setupForm(d);
     show('ready');
@@ -419,6 +516,65 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+  }
+  /* View-only files */
+  .protected .files {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .files :global(.guarded) {
+    position: relative;
+  }
+  .files :global(.guarded canvas) {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 520px;
+    object-fit: contain;
+    pointer-events: none;
+  }
+  .files :global(.wm) {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: var(--wm), var(--wm-dark);
+    background-position:
+      0 0,
+      160px 90px;
+  }
+  .files :global(.guarded video) {
+    position: relative;
+  }
+  .files :global(.pdf) {
+    min-height: 180px;
+    background: linear-gradient(160deg, var(--navy-950), var(--navy-800));
+    color: var(--blue-200);
+    font: 600 1.6rem var(--font-body);
+  }
+  .files :global(.pdf.expanded) {
+    display: block;
+    height: 560px;
+  }
+  .files :global(.pdf iframe) {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+  }
+  .files :global(.note) {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .shielded .files :global(.preview) {
+    filter: blur(28px) saturate(0.4);
+    transition: none;
+  }
+  @media print {
+    .protected {
+      display: none !important;
+    }
   }
   .review {
     max-width: 720px;
