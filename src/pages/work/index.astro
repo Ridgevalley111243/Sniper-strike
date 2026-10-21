@@ -16,6 +16,7 @@ const groups = [...new Set(projects.map(groupOf))];
   />
   <section class="section">
     <div class="container">
+      <h2 class="sr-only">Projects</h2>
       <div class="filters" role="group" aria-label="Filter projects" data-filters set:html={filtersHTML(groups)} />
       <div class="grid grid-3" data-grid data-fp={fingerprint(projects)} set:html={workGridHTML(projects, base, groupOf)} />
     </div>

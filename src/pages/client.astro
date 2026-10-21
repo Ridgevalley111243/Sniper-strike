@@ -17,9 +17,24 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
       </div>
     </header>
 
-    <section class="container state" data-state="loading">
-      <div class="spinner" aria-hidden="true"></div>
-      <p role="status">Opening your project…</p>
+    <section class="container delivery" data-state="loading" aria-busy="true">
+      <p class="sr-only" role="status">Opening your project…</p>
+      <div aria-hidden="true">
+        <span class="skel skel-line" style="width: 120px"></span>
+        <span class="skel skel-title"></span>
+        <span class="skel skel-pill"></span>
+        <span class="skel skel-line" style="width: 85%; margin-top: 24px"></span>
+        <span class="skel skel-line" style="width: 60%"></span>
+        <div class="files skel-files">
+          {[0, 1, 2].map(() => (
+            <div class="file card">
+              <span class="skel skel-block"></span>
+              <span class="skel skel-line" style="width: 70%"></span>
+              <span class="skel skel-line" style="width: 40%"></span>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
 
     <section class="container state" data-state="error" hidden>
@@ -28,7 +43,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
       <a class="btn btn-primary" href={base + 'contact/'}>Contact Trutech Business</a>
     </section>
 
-    <main class="container delivery" data-state="ready" hidden>
+    <div class="container delivery" data-state="ready" hidden>
       <p class="eyebrow" data-field="client"></p>
       <h1 data-field="title"></h1>
       <div class="meta">
@@ -89,7 +104,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
         These files were prepared for you by Trutech Business. Please don’t share this link: anyone with it can view them.
         <a href={base + 'terms/'}>Terms</a> · <a href={base + 'privacy/'}>Privacy</a>
       </p>
-    </main>
+    </div>
   </div>
 </Base>
 
@@ -391,6 +406,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     min-height: 72px;
   }
   .bar a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     text-decoration: none;
   }
   .secure {
@@ -407,22 +425,11 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   .state .lead {
     margin: 0 auto 28px;
   }
-  .spinner {
-    width: 40px;
-    height: 40px;
-    margin: 0 auto 18px;
-    border-radius: 50%;
-    border: 3px solid var(--border);
-    border-top-color: var(--blue-500);
-    animation: spin 0.9s linear infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
   .delivery {
     padding-block: clamp(40px, 6vw, 80px);
+  }
+  .skel-files {
+    margin-top: 40px;
   }
   .delivery h1 {
     font-size: clamp(2.2rem, 5vw, 3.6rem);

@@ -362,7 +362,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     backdrop-filter: blur(14px);
   }
   .now-label {
-    font-size: 0.74rem;
+    font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -404,6 +404,12 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     margin-left: -14px;
     border: 1.5px solid rgb(179 207 229 / 0.5);
     border-radius: 999px;
+  }
+  /* A 46px-wide tap area around the slim scroll cue. */
+  .scroll::after {
+    content: '';
+    position: absolute;
+    inset: -2px -10px;
   }
   .scroll span {
     position: absolute;
