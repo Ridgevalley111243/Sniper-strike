@@ -6,7 +6,7 @@ year: 2026
 status: Completed
 summary: Logos, flyers, banners, event graphics, school anniversary materials and portrait editing for businesses and institutions.
 services: [Logos, Flyers & adverts, Banners, Photo editing]
-order: 6
+order: 4
 ---
 
 ## The work
