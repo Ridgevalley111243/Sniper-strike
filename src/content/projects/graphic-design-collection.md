@@ -6,15 +6,15 @@ year: 2025
 status: Completed
 summary: Flyers, menus, event posters and seasonal social media graphics for restaurants, schools and Trutech Business itself.
 services: [Flyers & adverts, Food menus, Event posters, Social media graphics, Photo editing]
-cover: work/graphic-design/cover.webp
+cover: /work/graphic-design/cover.webp
 gallery:
-  - { src: work/graphic-design/december-welcome.webp, alt: "Welcome to December social media flyer for Trutech Business, with a QR code to chat on WhatsApp" }
-  - { src: work/graphic-design/jollof-mistress-menu.webp, alt: "Jollof Mistress food menu listing jollof rice meals and group packages with prices in cedis" }
-  - { src: work/graphic-design/kumasi-academy-debate.webp, alt: "Kumasi Academy inter-department debate poster with the topic, date, venue and cash prize" }
-  - { src: work/graphic-design/valentines-day.webp, alt: "Happy Valentine's Day flyer for Trutech Business with roses, promoting trudata.shop data bundles" }
-  - { src: work/graphic-design/ridgevalley-xmas-before-christmas.webp, alt: "Ridgevalley Hybrid School X'mas Before Christmas event flyer with date, fees and dress code" }
-  - { src: work/graphic-design/hajia-samsia-fast-foods.webp, alt: "Hajia Samsia Fast Foods menu flyer with photos of jollof, fried rice, noodles and porridge" }
-  - { src: work/graphic-design/november-new-month.webp, alt: "Happy New Month November flyer with grass lettering on a stone stage in a forest" }
+  - { src: /work/graphic-design/december-welcome.webp, alt: "Welcome to December social media flyer for Trutech Business, with a QR code to chat on WhatsApp" }
+  - { src: /work/graphic-design/jollof-mistress-menu.webp, alt: "Jollof Mistress food menu listing jollof rice meals and group packages with prices in cedis" }
+  - { src: /work/graphic-design/kumasi-academy-debate.webp, alt: "Kumasi Academy inter-department debate poster with the topic, date, venue and cash prize" }
+  - { src: /work/graphic-design/valentines-day.webp, alt: "Happy Valentine's Day flyer for Trutech Business with roses, promoting trudata.shop data bundles" }
+  - { src: /work/graphic-design/ridgevalley-xmas-before-christmas.webp, alt: "Ridgevalley Hybrid School X'mas Before Christmas event flyer with date, fees and dress code" }
+  - { src: /work/graphic-design/hajia-samsia-fast-foods.webp, alt: "Hajia Samsia Fast Foods menu flyer with photos of jollof, fried rice, noodles and porridge" }
+  - { src: /work/graphic-design/november-new-month.webp, alt: "Happy New Month November flyer with grass lettering on a stone stage in a forest" }
 order: 4
 ---
 

@@ -1,0 +1,139 @@
+# Admin page for the Trutech Business website (Sveltia CMS).
+# Open https://ridgevalley111243.github.io/trutechwebsite/admin/ and sign in
+# with a GitHub access token (see README.md → "Managing the site").
+# Every save is a commit to main, which redeploys the site in about a minute.
+
+backend:
+  name: github
+  repo: Ridgevalley111243/trutechwebsite
+  branch: main
+  auth_methods: [token]
+  commit_messages:
+    create: 'Add {{collection}} "{{slug}}"'
+    update: 'Update {{collection}} "{{slug}}"'
+    delete: 'Remove {{collection}} "{{slug}}"'
+    uploadMedia: 'Upload "{{path}}"'
+    deleteMedia: 'Delete "{{path}}"'
+
+app_title: Trutech admin
+site_url: https://ridgevalley111243.github.io/trutechwebsite/
+logo:
+  src: ../brand/icon-512.png
+publish_mode: simple
+
+# Uploaded images go to public/work/ and are converted to WebP, at most
+# 1600px wide, so photos straight from a phone stay light.
+media_folder: public/work
+public_folder: /work
+media_libraries:
+  default:
+    config:
+      max_file_size: 15000000
+      slugify_filename: true
+      transformations:
+        raster_image:
+          format: webp
+          quality: 82
+          width: 1600
+
+collections:
+  - name: projects
+    label: Portfolio
+    label_singular: Project
+    description: >-
+      Everything on the Work page: graphic design, websites and systems.
+      Projects marked "Show on home page" appear in Selected work (first three by order).
+    icon: work
+    folder: src/content/projects
+    extension: md
+    format: frontmatter
+    create: true
+    delete: true
+    slug: '{{title}}'
+    identifier_field: title
+    summary: '{{title}} · {{status}}'
+    thumbnail: cover
+    preview_path: work/{{slug}}/
+    sortable_fields:
+      fields: [order, title, year]
+      default:
+        field: order
+        direction: ascending
+    view_groups:
+      - label: Status
+        field: status
+    fields:
+      - { name: title, label: Title, widget: string }
+      - name: category
+        label: Type
+        widget: string
+        hint: >-
+          Shown above the title. The part before "·" becomes a filter on the Work page,
+          e.g. "Graphic design", "Website", "Web application · EdTech", "Management system".
+      - { name: client, label: Client, widget: string, hint: 'Who it was for, e.g. "Hajia Samsia Fast Foods".' }
+      - { name: year, label: Year, widget: number, value_type: int, min: 2000, max: 2100, default: 2026 }
+      - name: status
+        label: Status
+        widget: select
+        options: [Completed, Live, In development, Planned]
+        default: Completed
+      - { name: summary, label: Short summary, widget: text, hint: One or two sentences for the project card. }
+      - name: cover
+        label: Cover image
+        widget: image
+        required: false
+        hint: Shown on the project card and at the top of the project page. Leave empty for a branded cover.
+      - name: gallery
+        label: Gallery
+        label_singular: image
+        widget: list
+        required: false
+        hint: The designs or screenshots shown on the project page, in this order.
+        summary: '{{fields.alt}}'
+        thumbnail: src
+        fields:
+          - { name: src, label: Image, widget: image }
+          - { name: alt, label: Description, widget: string, hint: 'What the image shows, for people using screen readers, e.g. "Menu flyer for Hajia Samsia Fast Foods".' }
+      - name: services
+        label: Services
+        widget: list
+        required: false
+        hint: Tags such as "Logo design", "Flyers", "Supabase". Type one and press Enter.
+      - { name: link, label: Live link, widget: string, type: url, required: false, hint: 'For websites and systems that are online, e.g. "https://trudata.shop".' }
+      - { name: featured, label: Show on home page, widget: boolean, default: false, required: false }
+      - { name: order, label: Order, widget: number, value_type: int, default: 10, required: false, hint: Lower numbers come first on the Work page. }
+      - name: body
+        label: Project story
+        widget: markdown
+        required: false
+        hint: The problem, what you made and the result. Use headings like "The need" and "The work".
+
+  - name: settings
+    label: Settings
+    icon: settings
+    files:
+      - name: contact
+        label: Name, contact & social links
+        file: src/data/settings.json
+        format: json
+        fields:
+          - { name: owner, label: Your name, widget: string, required: false, hint: Shown on the About page. }
+          - { name: location, label: Location, widget: string, default: Ghana }
+          - { name: email, label: Email, widget: string, type: email, required: false }
+          - { name: phone, label: Phone, widget: string, required: false, hint: 'As people should see it, e.g. "+233 59 757 8538".' }
+          - { name: whatsapp, label: WhatsApp number, widget: string, required: false, hint: 'With country code, e.g. "233597578538". Used for the WhatsApp buttons.' }
+          - { name: whatsappName, label: WhatsApp name, widget: string, required: false }
+          - name: socials
+            label: Social links
+            label_singular: link
+            widget: list
+            required: false
+            summary: '{{fields.label}} {{fields.handle}}'
+            fields:
+              - { name: label, label: Network, widget: string, hint: 'e.g. "TikTok".' }
+              - { name: handle, label: Handle, widget: string, hint: 'e.g. "@trutech.business1".' }
+              - { name: url, label: Profile link, widget: string, type: url }
+              - name: icon
+                label: Icon
+                widget: select
+                options: [tiktok, x, whatsapp, instagram, facebook, youtube, pinterest, telegram, snapchat, threads]
