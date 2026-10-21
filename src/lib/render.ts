@@ -69,8 +69,8 @@ export function projectHTML(p: Project, index: number, base: string, next?: { pr
     .filter(Boolean)
     .join('');
   const services = p.services.length
-    ? `<aside><h2 class="pd-h">Services</h2><ul class="tags">${p.services.map((s) => `<li class="tag">${esc(s)}</li>`).join('')}</ul></aside>`
-    : '<aside></aside>';
+    ? `<div class="pd-aside"><h2 class="pd-h">Services</h2><ul class="tags">${p.services.map((s) => `<li class="tag">${esc(s)}</li>`).join('')}</ul></div>`
+    : '<div class="pd-aside"></div>';
   const gallery = p.gallery.length
     ? `<div class="container pd-gallery">${p.gallery
         .map((g) => `<img src="${esc(assetUrl(g.src, base))}" alt="${esc(g.alt)}" loading="lazy" decoding="async" />`)

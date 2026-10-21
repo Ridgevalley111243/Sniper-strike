@@ -23,6 +23,8 @@
   --inverse-bg: var(--navy-950); /* primary buttons, active filters */
   --inverse-bg-hover: var(--navy-800);
   --inverse-text: var(--white);
+  --skel: #e8eef5;
+  --skel-hi: rgb(255 255 255 / 0.7);
 
   --font-display: 'Al Ragas', 'Gloock', Georgia, 'Times New Roman', serif;
   --font-body: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -56,6 +58,8 @@
   --inverse-bg: var(--blue-200);
   --inverse-bg-hover: var(--white);
   --inverse-text: var(--navy-950);
+  --skel: #132a4c;
+  --skel-hi: rgb(255 255 255 / 0.07);
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -12px rgb(0 0 0 / 0.6);
   --shadow-lg: 0 24px 64px -24px rgb(0 0 0 / 0.7);
   color-scheme: dark;
@@ -65,6 +69,61 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+/* Skeleton placeholders while content loads (aria-busy on the container). */
+.skel {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--skel);
+}
+.skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--skel-hi), transparent);
+  animation: skel 1.4s ease-in-out infinite;
+}
+@keyframes skel {
+  to {
+    transform: translateX(100%);
+  }
+}
+.skel-line {
+  height: 0.9em;
+  margin: 0.55em 0;
+}
+.skel-title {
+  height: 1.8em;
+  width: 70%;
+  margin: 0.3em 0 0.5em;
+}
+.skel-pill {
+  width: 140px;
+  height: 28px;
+  border-radius: 999px;
+}
+.skel-block {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  .skel::after {
+    display: none;
+  }
+}
+
+/* Visible to screen readers only. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 /* Components set display: grid/flex; [hidden] must still hide them. */

@@ -217,7 +217,8 @@ async function route() {
   document.querySelectorAll<HTMLElement>('[data-nav]').forEach((a) =>
     a.dataset.nav === section ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'),
   );
-  main().innerHTML = '<p class="muted" role="status">Loading…</p>';
+  main().innerHTML = skeleton(Boolean(id) || section === 'settings' || section === 'account');
+  main().setAttribute('aria-busy', 'true');
   window.scrollTo(0, 0);
   try {
     if (section === 'projects') await (id ? projectForm(id) : projectList());
@@ -227,7 +228,23 @@ async function route() {
     else location.hash = '#/projects';
   } catch (e) {
     main().innerHTML = `<p class="error">${attr(friendly(e))}</p>`;
+  } finally {
+    main().removeAttribute('aria-busy');
   }
+}
+
+/** Placeholder shaped like the view that's loading: a list or a form. */
+function skeleton(form: boolean) {
+  const line = (w: string) => `<span class="skel skel-line" style="width:${w}"></span>`;
+  const head = `<div class="head"><div style="flex:1">${line('110px')}<span class="skel skel-title" style="width:min(70%,420px)"></span></div></div>`;
+  const body = form
+    ? [0, 1, 2]
+        .map(() => `<section class="card panel">${line('140px')}<span class="skel" style="height:46px"></span>${line('100px')}<span class="skel" style="height:46px"></span></section>`)
+        .join('')
+    : `<ul class="list">${[0, 1, 2, 3]
+        .map(() => `<li class="row"><span class="skel thumb"></span><span>${line('70%')}${line('45%')}</span><span class="skel skel-pill" style="width:72px;height:22px"></span></li>`)
+        .join('')}</ul>`;
+  return `<p class="sr-only" role="status">Loading…</p><div aria-hidden="true">${head}${body}</div>`;
 }
 
 /* ---------- portfolio ---------- */
@@ -375,7 +392,7 @@ async function projectForm(id: string) {
   };
 
   const drawCover = () => {
-    $('[data-cover]').innerHTML = `${cover ? `<img src="${attr(imgSrc(cover))}" alt="Cover preview" />` : ''}
+    $('[data-cover]').innerHTML = `${cover ? `<img src="${attr(imgSrc(cover))}" alt="Cover preview" loading="lazy" />` : ''}
       <label class="upload">${cover ? 'Replace cover' : '+ Add cover'}<input type="file" accept="image/*" data-add-cover /></label>
       ${cover ? '<button class="btn btn-ghost btn-sm" type="button" data-remove-cover>Remove</button>' : ''}`;
   };
@@ -841,10 +858,10 @@ async function settingsForm() {
       ? socials
           .map(
             (x, i) => `<div class="social" data-i="${i}">
-            <div class="field"><label>Network</label><input data-k="label" value="${attr(x.label)}" placeholder="TikTok" /></div>
-            <div class="field"><label>Handle</label><input data-k="handle" value="${attr(x.handle)}" placeholder="@trutech.business1" /></div>
-            <div class="field"><label>Profile link</label><textarea class="grow" rows="1" data-k="url" inputmode="url" placeholder="https://…">${attr(x.url)}</textarea></div>
-            <div class="field"><label>Icon</label><select data-k="icon">${ICONS.map((ic) => `<option${ic === x.icon ? ' selected' : ''}>${ic}</option>`).join('')}</select></div>
+            <div class="field"><label for="so-${i}-label">Network</label><input id="so-${i}-label" data-k="label" value="${attr(x.label)}" placeholder="TikTok" /></div>
+            <div class="field"><label for="so-${i}-handle">Handle</label><input id="so-${i}-handle" data-k="handle" value="${attr(x.handle)}" placeholder="@trutech.business1" /></div>
+            <div class="field"><label for="so-${i}-url">Profile link</label><textarea id="so-${i}-url" class="grow" rows="1" data-k="url" inputmode="url" placeholder="https://…">${attr(x.url)}</textarea></div>
+            <div class="field"><label for="so-${i}-icon">Icon</label><select id="so-${i}-icon" data-k="icon">${ICONS.map((ic) => `<option${ic === x.icon ? ' selected' : ''}>${ic}</option>`).join('')}</select></div>
             <button class="btn btn-ghost btn-sm" type="button" data-remove-social>Remove</button></div>`,
           )
           .join('')

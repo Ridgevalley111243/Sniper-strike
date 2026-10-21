@@ -46,7 +46,7 @@ const hasChannel = Boolean(site.email || site.whatsapp);
           )
         }
       </form>
-      <aside class="reveal">
+      <div class="reveal ways-col">
         <h2>Other ways to reach me</h2>
         <ul class="ways">
           {site.email && <li><a href={`mailto:${site.email}`}><Icon name="mail" /> {site.email}</a></li>}
@@ -55,7 +55,7 @@ const hasChannel = Boolean(site.email || site.whatsapp);
           <li class="muted"><Icon name="pin" /> {site.location}</li>
           {site.socials.map((s) => <li><a href={s.url} target="_blank" rel="me noopener" aria-label={`${s.label}: ${s.handle}`}><Icon name={s.icon} /> {s.label} · {s.handle}</a></li>)}
         </ul>
-      </aside>
+      </div>
     </div>
   </section>
 </Base>
@@ -136,7 +136,7 @@ const hasChannel = Boolean(site.email || site.whatsapp);
     background: var(--surface-2);
     margin: 0;
   }
-  aside h2 {
+  .ways-col h2 {
     font-size: clamp(1.6rem, 3vw, 2.2rem);
   }
   .ways {

@@ -62,7 +62,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
           <a href="#/account" data-nav="account">Account</a>
         </nav>
       </header>
-      <main class="container adm-main" data-main></main>
+      <div class="container adm-main" data-main></div>
     </div>
 
     <div class="toast" role="status" aria-live="polite" data-toast hidden></div>
@@ -92,6 +92,8 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     --inverse-text: #000;
     --shadow: none;
     --shadow-lg: 0 0 0 1px #2a2a2a;
+    --skel: #161616;
+    --skel-hi: rgb(255 255 255 / 0.06);
     color-scheme: dark;
     min-height: 100svh;
     background: #000;
@@ -122,6 +124,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     margin: 0;
   }
   .back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     font-size: 0.9rem;
     text-decoration: none;
   }
@@ -157,6 +162,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   .adm-brand {
     display: inline-flex;
     align-items: center;
+    min-height: 44px;
     gap: 12px;
     text-decoration: none;
   }
@@ -171,6 +177,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     text-transform: uppercase;
   }
   .adm-site {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--blue-200);
@@ -301,6 +310,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     font-weight: 500;
   }
   .adm .check input {
+    flex: none;
     width: 20px;
     height: 20px;
     accent-color: var(--blue-200);
@@ -318,7 +328,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     background: #2a0e0e;
   }
   .adm .btn-sm {
-    min-height: 36px;
+    min-height: 44px;
     padding: 0 12px;
     font-size: 0.85rem;
   }
@@ -335,7 +345,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     margin: 0;
   }
   .adm .crumb {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     margin-bottom: 8px;
     font-weight: 600;
     font-size: 0.9rem;
@@ -424,7 +436,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     border-radius: 999px;
     background: rgb(74 127 167 / 0.12);
     color: var(--accent-strong);
-    font-size: 0.74rem;
+    font-size: 0.75rem;
     font-weight: 600;
     white-space: nowrap;
   }
@@ -473,7 +485,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   }
   .adm .img-item .tools button {
     flex: 1;
-    min-height: 34px;
+    min-height: 44px;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--surface-2);
@@ -595,7 +607,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     border-radius: 8px;
     background: #1c1c1c;
     color: var(--blue-200);
-    font-size: 0.66rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.06em;
   }

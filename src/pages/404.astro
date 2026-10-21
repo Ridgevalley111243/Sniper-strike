@@ -22,8 +22,15 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     const el = document.querySelector<HTMLElement>('[data-project]')!;
     missing.hidden = true;
     el.hidden = false;
-    el.innerHTML = '<p class="container pd-head muted" role="status">Loading project…</p>';
-    liveProject(el, slug).catch(() => {
+    el.setAttribute('aria-busy', 'true');
+    el.innerHTML = `<section class="container pd-head"><p class="sr-only" role="status">Loading project…</p><div aria-hidden="true">
+      <span class="skel skel-line" style="width:90px"></span><span class="skel skel-line" style="width:160px"></span>
+      <span class="skel skel-title" style="height:3em;width:min(100%,640px)"></span>
+      <span class="skel skel-line" style="width:min(100%,560px)"></span><span class="skel skel-line" style="width:min(80%,420px)"></span>
+      <span class="skel" style="aspect-ratio:21/9;border-radius:28px;margin-top:40px"></span></div></section>`;
+    liveProject(el, slug)
+      .then(() => el.removeAttribute('aria-busy'))
+      .catch(() => {
       el.hidden = true;
       missing.hidden = false;
     });
