@@ -18,8 +18,9 @@ npm run build    # production build into dist/
 
 ## Editing your details
 Everything about you lives in **`src/site.ts`**: name, tagline, intro, contact details, social links, services,
-about text, toolkit, process and testimonials. Fill in the values marked `TODO` (name, email, phone/WhatsApp,
-socials). The contact buttons and footer links appear automatically once they're set.
+about text, toolkit, process and testimonials. Contact buttons and footer links appear only for the details that are
+set. Social links take an `icon` naming a brand mark in `src/components/Icon.astro` (`whatsapp`, `tiktok`, `x`); more
+marks can be copied from [Simple Icons](https://simpleicons.org).
 
 ## Portfolio projects
 Each project is a Markdown file in **`src/content/projects/`**. Copy one to add another:

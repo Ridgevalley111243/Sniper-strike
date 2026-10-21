@@ -11,12 +11,16 @@ export const site = {
   intro:
     'I design, build and support digital products: responsive websites, management systems, online platforms and brand identities that make work easier and help organisations run better.',
   location: 'Ghana',
-  email: '', // TODO, e.g. 'hello@trutechbusiness.com'
-  phone: '', // TODO, e.g. '+233 20 000 0000'
-  whatsapp: '', // TODO, digits only with country code, e.g. '233200000000'
+  email: 'Juvie111243@gmail.com',
+  phone: '+233 59 757 8538',
+  /** Digits only with country code: wa.me links use the number. */
+  whatsapp: '233597578538',
+  whatsappName: 'Trutechbusiness1',
+  // icon: a brand mark in Icon.astro (whatsapp, tiktok, x)
   socials: [
-    // TODO: add the profiles you use, e.g. { label: 'LinkedIn', url: 'https://www.linkedin.com/in/…' }
-  ] as { label: string; url: string }[],
+    { label: 'TikTok', handle: '@trutech.business1', url: 'https://www.tiktok.com/@trutech.business1', icon: 'tiktok' },
+    { label: 'X', handle: '@trutechbusiness', url: 'https://x.com/trutechbusiness', icon: 'x' },
+  ] as { label: string; handle: string; url: string; icon: string }[],
 
   about: {
     paragraphs: [

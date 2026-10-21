@@ -31,7 +31,7 @@ const hasChannel = Boolean(site.email || site.whatsapp);
             <div class="actions">
               {site.whatsapp && (
                 <button class="btn btn-primary" type="submit" value="whatsapp">
-                  <Icon name="chat" /> Send on WhatsApp
+                  <Icon name="whatsapp" /> Send on WhatsApp
                 </button>
               )}
               {site.email && (
@@ -50,9 +50,9 @@ const hasChannel = Boolean(site.email || site.whatsapp);
         <ul class="ways">
           {site.email && <li><a href={`mailto:${site.email}`}><Icon name="mail" /> {site.email}</a></li>}
           {site.phone && <li><a href={`tel:${site.phone.replace(/\s/g, '')}`}><Icon name="phone" /> {site.phone}</a></li>}
-          {site.whatsapp && <li><a href={whatsappLink()}><Icon name="chat" /> WhatsApp chat</a></li>}
+          {site.whatsapp && <li><a href={whatsappLink()} target="_blank" rel="noopener" aria-label={`WhatsApp: ${site.whatsappName}`}><Icon name="whatsapp" /> WhatsApp · {site.whatsappName}</a></li>}
           <li class="muted"><Icon name="pin" /> {site.location}</li>
-          {site.socials.map((s) => <li><a href={s.url} target="_blank" rel="me noopener"><Icon name="arrow-up-right" /> {s.label}</a></li>)}
+          {site.socials.map((s) => <li><a href={s.url} target="_blank" rel="me noopener" aria-label={`${s.label}: ${s.handle}`}><Icon name={s.icon} /> {s.label} · {s.handle}</a></li>)}
         </ul>
       </aside>
     </div>

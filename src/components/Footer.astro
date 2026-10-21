@@ -25,7 +25,7 @@ const year = new Date().getFullYear();
       <ul>
         {site.email && <li><a href={`mailto:${site.email}`}><Icon name="mail" size={18} /> {site.email}</a></li>}
         {site.phone && <li><a href={`tel:${site.phone.replace(/\s/g, '')}`}><Icon name="phone" size={18} /> {site.phone}</a></li>}
-        {whatsappLink() && <li><a href={whatsappLink()}><Icon name="chat" size={18} /> WhatsApp</a></li>}
+        {whatsappLink() && <li><a href={whatsappLink()}><Icon name="whatsapp" size={18} /> WhatsApp</a></li>}
         <li class="muted"><Icon name="pin" size={18} /> {site.location}</li>
         <li><a href={base + 'contact/'}><Icon name="arrow" size={18} /> Send a message</a></li>
       </ul>
@@ -35,7 +35,13 @@ const year = new Date().getFullYear();
         <div>
           <h2 class="h">Follow</h2>
           <ul>
-            {site.socials.map((s) => <li><a href={s.url} rel="me noopener" target="_blank">{s.label}</a></li>)}
+            {site.socials.map((s) => (
+              <li>
+                <a href={s.url} rel="me noopener" target="_blank" aria-label={`${s.label}: ${s.handle}`}>
+                  <Icon name={s.icon} size={18} /> {s.handle}
+                </a>
+              </li>
+            ))}
           </ul>
         </div>
       )
