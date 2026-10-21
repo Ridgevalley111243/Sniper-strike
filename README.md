@@ -16,14 +16,39 @@ npm run check    # type-check
 npm run build    # production build into dist/
 ```
 
-## Editing your details
-Everything about you lives in **`src/site.ts`**: name, tagline, intro, contact details, social links, services,
-about text, toolkit, process and testimonials. Contact buttons and footer links appear only for the details that are
-set. Social links take an `icon` naming a brand mark in `src/components/Icon.astro` (`whatsapp`, `tiktok`, `x`); more
-marks can be copied from [Simple Icons](https://simpleicons.org).
+## Managing the site (admin page)
+Add and edit portfolio projects, upload images and change your contact details from any browser, including a phone:
+**https://ridgevalley111243.github.io/trutechwebsite/admin/**
 
-## Portfolio projects
-Each project is a Markdown file in **`src/content/projects/`**. Copy one to add another:
+The admin page is [Sveltia CMS](https://sveltiacms.app). Every save is a commit to `main`, so the site redeploys
+with the change in about a minute. Its settings are in `public/admin/config.yml`.
+
+**First sign-in** (once per device): create a GitHub access token that can only edit this repository.
+1. Open https://github.com/settings/personal-access-tokens/new (signed in to GitHub).
+2. Name it "Trutech admin", pick an expiration (up to a year), and under **Repository access** choose
+   **Only select repositories** → `trutechwebsite`.
+3. Under **Permissions → Repository permissions**, set **Contents** to **Read and write**.
+4. Generate the token and copy it.
+5. On the admin page, tap **Sign In Using Access Token** and paste it.
+
+The browser remembers the token. Only sign in on your own devices; sign out from the menu on a shared one, and if a
+token leaks, delete it on GitHub and create a new one. When it expires, create a new one the same way.
+
+**Portfolio** holds everything on the Work page:
+- **Type** is shown above the title, and the part before "·" becomes a Work page filter
+  (e.g. `Graphic design`, `Website`, `Web application · EdTech`).
+- **Cover image** is shown on the card; without one a branded cover is generated.
+- **Gallery** images appear on the project page in order. Give each a short description.
+- **Show on home page** puts the project in Selected work (the first three by **Order**).
+- Uploaded images are converted to WebP and scaled to at most 1600px wide, so phone photos stay light.
+
+**Settings** holds your name, email, phone, WhatsApp and social links. Social links pick an icon from the brand marks in
+`src/components/Icon.astro` (more can be copied from [Simple Icons](https://simpleicons.org)).
+
+## Editing by hand
+Projects are Markdown files in **`src/content/projects/`** and contact details are in **`src/data/settings.json`**;
+the admin page edits the same files. Other text (tagline, intro, services, about, toolkit, process) is in
+**`src/site.ts`**. A project file looks like this:
 
 ```yaml
 title: Project name
@@ -33,15 +58,13 @@ year: 2026
 status: Live | Completed | In development | Planned
 summary: One or two sentences shown on the card.
 services: [Web design, Supabase]
-cover: work/my-project.jpg           # optional image in public/work/
+cover: /work/my-project.webp         # optional image in public/work/
 gallery:                             # optional extra images
-  - { src: work/my-project-2.jpg, alt: Dashboard on mobile }
+  - { src: /work/my-project-2.webp, alt: Dashboard on mobile }
 link: https://…                      # optional live link
 featured: true                       # show on the home page (top 3 by order)
 order: 1
 ```
-
-Without a `cover`, a branded cover is generated from the palette.
 
 ## Client work (private links)
 Clients get a private link where they can view and download their files. Because this repository is public, the

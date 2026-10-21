@@ -1,26 +1,21 @@
 // Everything about you, in one place. Edit these values and the whole site
-// updates. Values marked "TODO" are still waiting for your details.
+// updates.
+import contact from './data/settings.json';
 
 export const site = {
   brand: 'Trutech Business',
   tagline: 'Where ideas turn into reality.',
-  /** TODO: your name as clients should see it. */
-  owner: '',
   role: 'Technology entrepreneur & digital solutions practitioner',
   headline: 'Practical digital solutions for businesses, schools and people in Ghana.',
   intro:
     'I design, build and support digital products: responsive websites, management systems, online platforms and brand identities that make work easier and help organisations run better.',
-  location: 'Ghana',
-  email: 'Juvie111243@gmail.com',
-  phone: '+233 59 757 8538',
+  // Name, contact details and social links are edited in the admin page
+  // (/admin/ → Settings), which saves them to src/data/settings.json.
+  ...contact,
+  owner: contact.owner ?? '',
   /** Digits only with country code: wa.me links use the number. */
-  whatsapp: '233597578538',
-  whatsappName: 'Trutechbusiness1',
-  // icon: a brand mark in Icon.astro (whatsapp, tiktok, x)
-  socials: [
-    { label: 'TikTok', handle: '@trutech.business1', url: 'https://www.tiktok.com/@trutech.business1', icon: 'tiktok' },
-    { label: 'X', handle: '@trutechbusiness', url: 'https://x.com/trutechbusiness', icon: 'x' },
-  ] as { label: string; handle: string; url: string; icon: string }[],
+  whatsapp: (contact.whatsapp ?? '').replace(/\D/g, ''),
+  socials: (contact.socials ?? []).filter((s) => s.url) as { label: string; handle: string; url: string; icon: string }[],
 
   about: {
     paragraphs: [

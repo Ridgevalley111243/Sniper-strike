@@ -1,0 +1,22 @@
+{
+  "owner": "",
+  "location": "Ghana",
+  "email": "Juvie111243@gmail.com",
+  "phone": "+233 59 757 8538",
+  "whatsapp": "233597578538",
+  "whatsappName": "Trutechbusiness1",
+  "socials": [
+    {
+      "label": "TikTok",
+      "handle": "@trutech.business1",
+      "url": "https://www.tiktok.com/@trutech.business1",
+      "icon": "tiktok"
+    },
+    {
+      "label": "X",
+      "handle": "@trutechbusiness",
+      "url": "https://x.com/trutechbusiness",
+      "icon": "x"
+    }
+  ]
+}
