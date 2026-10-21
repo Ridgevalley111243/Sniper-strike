@@ -4,6 +4,7 @@ import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
 import { site } from '../site';
 import '../styles/global.css';
+import '../styles/portfolio.css';
 
 interface Props {
   title?: string;
@@ -26,7 +27,7 @@ const ragas = ['woff2', 'otf', 'ttf'].find((ext) => fs.existsSync(`public/fonts/
 const ragasFormat = { woff2: 'woff2', otf: 'opentype', ttf: 'truetype' }[ragas ?? 'woff2'];
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" data-base={base}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -112,5 +113,44 @@ const ragasFormat = { woff2: 'woff2', otf: 'opentype', ttf: 'truetype' }[ragas ?
         items.forEach((el) => el.classList.add('is-visible'));
       }
     </script>
+    {
+      !bare && (
+        <script>
+          // Hidden way into the admin: long-press (phones) or double-click
+          // (computers) an empty part of any page.
+          const base = document.documentElement.dataset.base ?? '/';
+          const open = () => (location.href = base + 'admin/');
+          const empty = (t: EventTarget | null) =>
+            t instanceof Element &&
+            !t.closest('a, button, input, textarea, select, label, summary, video, img, svg, [role="button"], [contenteditable]');
+          document.addEventListener('dblclick', (e) => {
+            if (empty(e.target) && !getSelection()?.toString().trim()) open();
+          });
+          let timer: number | undefined;
+          let x = 0;
+          let y = 0;
+          const cancel = () => clearTimeout(timer);
+          document.addEventListener(
+            'touchstart',
+            (e) => {
+              cancel();
+              if (e.touches.length !== 1 || !empty(e.target)) return;
+              ({ clientX: x, clientY: y } = e.touches[0]);
+              timer = window.setTimeout(open, 1200);
+            },
+            { passive: true },
+          );
+          document.addEventListener(
+            'touchmove',
+            (e) => {
+              const t = e.touches[0];
+              if (Math.hypot(t.clientX - x, t.clientY - y) > 12) cancel();
+            },
+            { passive: true },
+          );
+          ['touchend', 'touchcancel', 'scroll'].forEach((t) => document.addEventListener(t, cancel, { passive: true }));
+        </script>
+      )
+    }
   </body>
 </html>

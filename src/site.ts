@@ -1,6 +1,7 @@
-// Everything about you, in one place. Edit these values and the whole site
-// updates.
-import contact from './data/settings.json';
+// Everything about you, in one place. Name, contact details and social links
+// are edited in the admin (Settings) and read from Supabase at build time;
+// the rest of the text is here.
+import { settings } from './lib/build-data';
 
 export const site = {
   brand: 'Trutech Business',
@@ -9,13 +10,7 @@ export const site = {
   headline: 'Practical digital solutions for businesses, schools and people in Ghana.',
   intro:
     'I design, build and support digital products: responsive websites, management systems, online platforms and brand identities that make work easier and help organisations run better.',
-  // Name, contact details and social links are edited in the admin page
-  // (/admin/ → Settings), which saves them to src/data/settings.json.
-  ...contact,
-  owner: contact.owner ?? '',
-  /** Digits only with country code: wa.me links use the number. */
-  whatsapp: (contact.whatsapp ?? '').replace(/\D/g, ''),
-  socials: (contact.socials ?? []).filter((s) => s.url) as { label: string; handle: string; url: string; icon: string }[],
+  ...settings,
 
   about: {
     paragraphs: [
@@ -36,10 +31,10 @@ export const site = {
       { title: 'Educational technology practitioner', text: 'Connecting computing to classroom teaching, school administration and learning materials.' },
     ],
     toolkit: [
-      { area: 'Web development', tools: ['HTML', 'CSS', 'JavaScript', 'Responsive design', 'GitHub Pages'] },
+      { area: 'Web development', tools: ['Visual Studio Code', 'HTML', 'CSS', 'JavaScript', 'Framer', 'GitHub Pages'] },
       { area: 'Backend & data', tools: ['Supabase', 'PostgreSQL', 'Authentication', 'Row Level Security'] },
       { area: 'Payments & integrations', tools: ['Paystack', 'Refer2Bundle API', 'AdSense', 'AdMob'] },
-      { area: 'Design & media', tools: ['Canva', 'Affinity', 'Photopea', 'PixelLab', 'AI-assisted animation'] },
+      { area: 'Design & media', tools: ['Affinity by Canva', 'Framer', 'AI-assisted animation'] },
       { area: 'Mobile & hardware', tools: ['Android APK workflows', 'Android SDK', 'Windows 11 diagnostics', 'RAM & SSD upgrades'] },
       { area: 'Vector & production', tools: ['Inkscape', 'Ink/Stitch', 'SVG'] },
     ],

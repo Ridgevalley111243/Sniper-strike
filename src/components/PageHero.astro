@@ -8,7 +8,7 @@ interface Props {
 const { eyebrow, title, lead } = Astro.props;
 ---
 <section class="page-hero">
-  <FlowBackground />
+  <FlowBackground tone="light" />
   <div class="container inner">
     <p class="eyebrow">{eyebrow}</p>
     <h1>{title}</h1>
@@ -20,21 +20,21 @@ const { eyebrow, title, lead } = Astro.props;
   .page-hero {
     position: relative;
     overflow: hidden;
-    color: var(--mist-50);
-    padding-block: clamp(150px, 20vw, 200px) clamp(64px, 9vw, 104px);
+    color: var(--text);
+    padding-block: clamp(64px, 10vw, 120px) clamp(56px, 8vw, 96px);
   }
   .inner {
     position: relative;
     z-index: 1;
   }
   .eyebrow {
-    color: var(--blue-200);
+    color: var(--accent);
   }
   h1 {
     font-size: clamp(2.6rem, 6vw, 4.8rem);
     max-width: 16ch;
   }
   .lead {
-    color: #c4d6e6;
+    color: var(--text-muted);
   }
 </style>

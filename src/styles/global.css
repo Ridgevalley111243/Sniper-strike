@@ -7,18 +7,19 @@
   --mist-50: #f6fafd; /* F6FAFD */
   --white: #ffffff;
 
-  --bg: var(--mist-50);
+  /* Clear, white page; the brand blues are for accents, buttons and bands. */
+  --bg: var(--white);
   --surface: var(--white);
   --text: var(--navy-950);
-  --text-muted: #3c5876; /* 6.6:1 on mist */
-  --border: #d6e3ef;
-  --accent: var(--blue-500);
+  --text-muted: #46586d; /* 7:1 on white */
+  --border: #e1e8f0;
+  --accent: #2f6a95; /* brand blue, darkened for text: 5.6:1 on white */
   --accent-strong: var(--navy-800);
   --ring: #2f6a95;
-  --surface-2: #eaf2f9; /* tinted bands and notices */
-  --header-bg: rgb(246 250 253 / 0.86);
+  --surface-2: #f4f7fb; /* soft bands, panels and notices */
+  --header-bg: rgb(255 255 255 / 0.9);
   --menu-bg: var(--white);
-  --field-bg: var(--mist-50);
+  --field-bg: #f7f9fc;
   --inverse-bg: var(--navy-950); /* primary buttons, active filters */
   --inverse-bg-hover: var(--navy-800);
   --inverse-text: var(--white);
@@ -64,6 +65,11 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+/* Components set display: grid/flex; [hidden] must still hide them. */
+[hidden] {
+  display: none !important;
 }
 
 html {
@@ -261,6 +267,10 @@ p {
   --inverse-bg: var(--blue-200);
   --inverse-bg-hover: var(--white);
   --inverse-text: var(--navy-950);
+}
+/* A soft band to separate sections on the white page. */
+.tint {
+  background: var(--surface-2);
 }
 /* Navy bands would vanish into the dark page, so set them a shade deeper. */
 :root[data-theme='dark'] .dark {
