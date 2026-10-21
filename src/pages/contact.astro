@@ -1,0 +1,161 @@
+---
+import Icon from '../components/Icon.astro';
+import PageHero from '../components/PageHero.astro';
+import Base from '../layouts/Base.astro';
+import { site, whatsappLink } from '../site';
+const hasChannel = Boolean(site.email || site.whatsapp);
+---
+<Base title="Contact" overDark description="Start a project with Trutech Business: websites, systems, branding, multimedia and IT support in Ghana.">
+  <PageHero eyebrow="Contact" title="Let’s turn your idea into reality." lead="Tell me a little about what you need. I usually reply within a day." />
+  <section class="section">
+    <div class="container layout">
+      <form class="card form reveal" data-form data-email={site.email} data-whatsapp={site.whatsapp}>
+        <div class="field">
+          <label for="name">Your name</label>
+          <input id="name" name="name" autocomplete="name" required />
+        </div>
+        <div class="field">
+          <label for="topic">What do you need?</label>
+          <select id="topic" name="topic">
+            {site.services.map((s) => <option>{s.title}</option>)}
+            <option>Something else</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="message">Project details</label>
+          <textarea id="message" name="message" rows="6" required placeholder="What are you trying to achieve, and by when?"></textarea>
+          <p class="hint">Your message opens in WhatsApp or your email app, ready to send. Nothing is stored on this website.</p>
+        </div>
+        {
+          hasChannel ? (
+            <div class="actions">
+              {site.whatsapp && (
+                <button class="btn btn-primary" type="submit" value="whatsapp">
+                  <Icon name="chat" /> Send on WhatsApp
+                </button>
+              )}
+              {site.email && (
+                <button class="btn btn-ghost" type="submit" value="email">
+                  <Icon name="mail" /> Send by email
+                </button>
+              )}
+            </div>
+          ) : (
+            <p class="notice" role="status">Contact details are being set up. Please check back soon.</p>
+          )
+        }
+      </form>
+      <aside class="reveal">
+        <h2>Other ways to reach me</h2>
+        <ul class="ways">
+          {site.email && <li><a href={`mailto:${site.email}`}><Icon name="mail" /> {site.email}</a></li>}
+          {site.phone && <li><a href={`tel:${site.phone.replace(/\s/g, '')}`}><Icon name="phone" /> {site.phone}</a></li>}
+          {site.whatsapp && <li><a href={whatsappLink()}><Icon name="chat" /> WhatsApp chat</a></li>}
+          <li class="muted"><Icon name="pin" /> {site.location}</li>
+          {site.socials.map((s) => <li><a href={s.url} target="_blank" rel="me noopener"><Icon name="arrow-up-right" /> {s.label}</a></li>)}
+        </ul>
+      </aside>
+    </div>
+  </section>
+</Base>
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-form]');
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!form.reportValidity()) return;
+    const data = new FormData(form);
+    const via = (e.submitter as HTMLButtonElement | null)?.value ?? 'email';
+    const text = `Hello Trutech Business,\n\nMy name is ${data.get('name')}.\nI need: ${data.get('topic')}\n\n${data.get('message')}`;
+    if (via === 'whatsapp' && form.dataset.whatsapp) {
+      window.open(`https://wa.me/${form.dataset.whatsapp}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    } else if (form.dataset.email) {
+      const subject = `New project: ${data.get('topic')}`;
+      window.location.href = `mailto:${form.dataset.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+    }
+  });
+</script>
+<style>
+  .layout {
+    display: grid;
+    gap: 48px;
+  }
+  @media (min-width: 960px) {
+    .layout {
+      grid-template-columns: 1.4fr 1fr;
+      gap: 72px;
+    }
+  }
+  .form {
+    display: grid;
+    gap: 22px;
+    box-shadow: var(--shadow);
+  }
+  .field {
+    display: grid;
+    gap: 8px;
+  }
+  label {
+    font-weight: 600;
+    font-size: 0.92rem;
+  }
+  input,
+  select,
+  textarea {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--mist-50);
+    color: var(--text);
+    font: 1rem var(--font-body);
+    transition: border-color 0.2s;
+  }
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--blue-500);
+  }
+  textarea {
+    resize: vertical;
+  }
+  .hint {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .notice {
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    background: #eaf2f9;
+    margin: 0;
+  }
+  aside h2 {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+  }
+  .ways {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .ways li,
+  .ways a {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    text-decoration: none;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  .ways a:hover {
+    color: var(--blue-500);
+  }
+</style>

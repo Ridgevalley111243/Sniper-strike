@@ -1,0 +1,49 @@
+---
+// Leaf mark + wordmark set in Montserrat, matching the logo artwork.
+interface Props {
+  tone?: 'dark' | 'light';
+}
+const { tone = 'dark' } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+<span class:list={['logo', `tone-${tone}`]}>
+  <img src={`${base}brand/${tone === 'light' ? 'leaf-light' : 'leaf'}.png`} alt="" width="40" height="31" />
+  <span class="words">
+    <span class="tru">TRUTECH</span>
+    <span class="biz">BUSINESS</span>
+  </span>
+</span>
+<style>
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  img {
+    width: 40px;
+    height: auto;
+  }
+  .words {
+    display: grid;
+    line-height: 1;
+    font-family: var(--font-body);
+  }
+  .tru {
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.06em;
+  }
+  .biz {
+    font-weight: 500;
+    font-size: 0.62rem;
+    letter-spacing: 0.32em;
+    color: var(--blue-500);
+    margin-top: 3px;
+  }
+  .tone-light .tru {
+    color: var(--white);
+  }
+  .tone-light .biz {
+    color: var(--blue-200);
+  }
+</style>

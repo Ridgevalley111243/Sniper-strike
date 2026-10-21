@@ -1,0 +1,187 @@
+---
+import Icon from './Icon.astro';
+import Logo from './Logo.astro';
+
+interface Props {
+  /** Header sits on the dark hero (home) rather than the light page. */
+  overDark?: boolean;
+}
+const { overDark = false } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const path = Astro.url.pathname.replace(base, '/');
+const links = [
+  { href: 'work/', label: 'Work' },
+  { href: 'services/', label: 'Services' },
+  { href: 'about/', label: 'About' },
+];
+const current = (href: string) => path.startsWith('/' + href);
+---
+<header class:list={['site-header', { 'over-dark': overDark }]} data-header>
+  <div class="container bar">
+    <a href={base} class="home" aria-label="Trutech Business home">
+      <Logo tone={overDark ? 'light' : 'dark'} />
+    </a>
+    <nav aria-label="Main">
+      <ul id="nav-links" data-nav>
+        {
+          links.map((l) => (
+            <li>
+              <a href={base + l.href} aria-current={current(l.href) ? 'page' : undefined}>
+                {l.label}
+              </a>
+            </li>
+          ))
+        }
+        <li><a class="btn btn-primary cta" href={base + 'contact/'}>Start a project</a></li>
+      </ul>
+      <button class="menu" type="button" aria-expanded="false" aria-controls="nav-links" data-menu>
+        <span class="open"><Icon name="menu" label="Open menu" /></span>
+        <span class="shut"><Icon name="close" label="Close menu" /></span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const header = document.querySelector<HTMLElement>('[data-header]')!;
+  const button = header.querySelector<HTMLButtonElement>('[data-menu]')!;
+  const setOpen = (open: boolean) => {
+    header.classList.toggle('is-open', open);
+    button.setAttribute('aria-expanded', String(open));
+  };
+  button.addEventListener('click', () => setOpen(!header.classList.contains('is-open')));
+  header.querySelectorAll('[data-nav] a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
+  document.addEventListener('keydown', (e) => e.key === 'Escape' && setOpen(false));
+  const onScroll = () => header.classList.toggle('is-scrolled', window.scrollY > 8);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+</script>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgb(246 250 253 / 0.86);
+    backdrop-filter: saturate(1.4) blur(14px);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    border-bottom: 1px solid transparent;
+    transition:
+      background-color 0.25s,
+      border-color 0.25s;
+  }
+  .site-header.is-scrolled {
+    border-bottom-color: var(--border);
+  }
+  .over-dark {
+    position: absolute;
+    inset: 0 0 auto;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    color: var(--white);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 76px;
+  }
+  .home {
+    text-decoration: none;
+    display: inline-flex;
+    padding-block: 6px;
+  }
+  ul {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  ul a:not(.btn) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 14px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    text-decoration: none;
+    border-radius: 999px;
+    transition: background-color 0.2s;
+  }
+  ul a:not(.btn):hover {
+    background: rgb(74 127 167 / 0.12);
+  }
+  ul a[aria-current='page'] {
+    color: var(--blue-500);
+  }
+  .over-dark ul a[aria-current='page'] {
+    color: var(--blue-200);
+  }
+  .over-dark .cta {
+    background: var(--blue-200);
+    color: var(--navy-950);
+  }
+  .cta {
+    margin-left: 8px;
+  }
+  .menu {
+    display: none;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+  }
+  .menu .shut {
+    display: none;
+  }
+  @media (max-width: 820px) {
+    .menu {
+      display: inline-flex;
+    }
+    ul {
+      display: none;
+      position: absolute;
+      top: 76px;
+      left: var(--gutter);
+      right: var(--gutter);
+      flex-direction: column;
+      align-items: stretch;
+      gap: 4px;
+      padding: 12px;
+      background: var(--white);
+      color: var(--navy-950);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+    }
+    .is-open ul {
+      display: flex;
+    }
+    .is-open .menu .open {
+      display: none;
+    }
+    .is-open .menu .shut {
+      display: inline;
+    }
+    ul a:not(.btn) {
+      min-height: 48px;
+    }
+    .cta,
+    .over-dark .cta {
+      margin: 6px 0 0;
+      background: var(--navy-950);
+      color: var(--white);
+    }
+    .over-dark ul a[aria-current='page'] {
+      color: var(--blue-500);
+    }
+  }
+</style>

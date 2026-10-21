@@ -1,0 +1,40 @@
+---
+import FlowBackground from './FlowBackground.astro';
+interface Props {
+  eyebrow: string;
+  title: string;
+  lead?: string;
+}
+const { eyebrow, title, lead } = Astro.props;
+---
+<section class="page-hero">
+  <FlowBackground />
+  <div class="container inner">
+    <p class="eyebrow">{eyebrow}</p>
+    <h1>{title}</h1>
+    {lead && <p class="lead">{lead}</p>}
+    <slot />
+  </div>
+</section>
+<style>
+  .page-hero {
+    position: relative;
+    overflow: hidden;
+    color: var(--mist-50);
+    padding-block: clamp(150px, 20vw, 200px) clamp(64px, 9vw, 104px);
+  }
+  .inner {
+    position: relative;
+    z-index: 1;
+  }
+  .eyebrow {
+    color: var(--blue-200);
+  }
+  h1 {
+    font-size: clamp(2.6rem, 6vw, 4.8rem);
+    max-width: 16ch;
+  }
+  .lead {
+    color: #c4d6e6;
+  }
+</style>
