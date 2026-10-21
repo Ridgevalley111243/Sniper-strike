@@ -1,0 +1,108 @@
+---
+import PageHero from '../components/PageHero.astro';
+import Base from '../layouts/Base.astro';
+import { site } from '../site';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const UPDATED = '21 October 2026';
+---
+<Base title="Privacy Policy" description="How Trutech Business collects, uses and protects personal information.">
+  <PageHero eyebrow="Legal" title="Privacy Policy" lead={`Last updated ${UPDATED}`} />
+  <section class="section">
+    <div class="container prose legal-text">
+      <p>
+        This policy explains what personal information {site.brand} (“we”, “us”) collects when you use this website
+        or work with us, why we collect it, and the choices you have. We handle personal information in line with
+        Ghana’s Data Protection Act, 2012 (Act 843).
+      </p>
+
+      <h2>Who we are</h2>
+      <p>
+        {site.brand} is a technology and design business based in {site.location}. You can reach us at
+        {site.email && <> <a href={`mailto:${site.email}`}>{site.email}</a></>}
+        {site.phone && <> or {site.phone}</>}.
+      </p>
+
+      <h2>Browsing this website</h2>
+      <ul>
+        <li>The website has no user accounts, advertising or analytics trackers, and it doesn’t set cookies.</li>
+        <li>If you switch between light and dark mode, your choice is saved in your own browser only.</li>
+        <li>
+          Like any website, the services that deliver it receive technical information such as your IP address and
+          browser type: GitHub Pages (hosting), Google Fonts (fonts) and Supabase (portfolio content and images).
+        </li>
+      </ul>
+
+      <h2>When you contact us</h2>
+      <p>
+        The contact form doesn’t store anything on this website. It opens WhatsApp or your email app with your
+        message ready to send, so we receive only what you choose to send: usually your name, contact details and
+        project details. WhatsApp and your email provider handle your message under their own privacy policies.
+      </p>
+
+      <h2>When you’re our client</h2>
+      <p>To deliver and review your work, we keep:</p>
+      <ul>
+        <li>your name, and your WhatsApp number if you give it to us;</li>
+        <li>the project title, our messages to you and the files we prepare for you;</li>
+        <li>the feedback, approvals and ratings you send through your private link;</li>
+        <li>when your private link was first opened.</li>
+      </ul>
+      <p>
+        This information is stored with Supabase, our database and file storage provider, on servers in London,
+        United Kingdom. Your files can only be opened through your private link, which we can switch off, replace or
+        set to expire, and only the {site.brand} administrator can manage them.
+      </p>
+
+      <h2>Why we use your information</h2>
+      <ul>
+        <li>to reply to you and prepare quotes;</li>
+        <li>to deliver, review and support the work you asked for;</li>
+        <li>to keep business records such as approvals and payments;</li>
+        <li>to show completed work in our portfolio, as described in our <a href={`${base}terms/`}>Terms</a>.</li>
+      </ul>
+      <p>We don’t sell personal information or use it for advertising.</p>
+
+      <h2>Who we share it with</h2>
+      <p>
+        Only the service providers that run this website and our work: Supabase (database and files), GitHub
+        (website hosting), Google Fonts (fonts) and WhatsApp or email when you use them to talk to us. We may also
+        share information when the law requires it.
+      </p>
+
+      <h2>How long we keep it</h2>
+      <p>
+        We keep client files for as long as we need them to deliver and support your project, usually up to 12 months
+        after delivery, then delete them. We keep approvals, reviews and payment records as business records. You can
+        ask us to delete your information sooner.
+      </p>
+
+      <h2>Your rights</h2>
+      <p>
+        You can ask to see the personal information we hold about you, to correct it, or to delete it, and you can
+        withdraw any consent you gave. Contact us using the details above. If you’re not satisfied with our answer,
+        you can complain to the Data Protection Commission of Ghana.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        Our services are for businesses, schools and adults. Work for schools is arranged with the school, not with
+        students directly.
+      </p>
+
+      <h2>Changes</h2>
+      <p>If we change this policy, we’ll update it on this page and change the date at the top.</p>
+    </div>
+  </section>
+</Base>
+<style>
+  .legal-text {
+    max-width: 72ch;
+  }
+  .legal-text h2 {
+    font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+    margin-top: 1.8em;
+  }
+  .legal-text li {
+    margin-bottom: 0.5em;
+  }
+</style>

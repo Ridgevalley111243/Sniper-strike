@@ -3,6 +3,7 @@ import Icon from '../components/Icon.astro';
 import PageHero from '../components/PageHero.astro';
 import Base from '../layouts/Base.astro';
 import { site, whatsappLink } from '../site';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const hasChannel = Boolean(site.email || site.whatsapp);
 ---
 <Base title="Contact" description="Start a project with Trutech Business: websites, systems, branding and IT support in Ghana.">
@@ -24,7 +25,7 @@ const hasChannel = Boolean(site.email || site.whatsapp);
         <div class="field">
           <label for="message">Project details</label>
           <textarea id="message" name="message" rows="6" required placeholder="What are you trying to achieve, and by when?"></textarea>
-          <p class="hint">Your message opens in WhatsApp or your email app, ready to send. Nothing is stored on this website.</p>
+          <p class="hint">Your message opens in WhatsApp or your email app, ready to send. Nothing is stored on this website. See our <a href={base + 'privacy/'}>Privacy Policy</a>.</p>
         </div>
         {
           hasChannel ? (

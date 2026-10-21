@@ -13,12 +13,12 @@ const tools = [...new Set(site.about.toolkit.flatMap((t) => t.tools))];
 const building = projects.filter((p) => p.status === 'In development').slice(0, 2);
 ---
 <Base overDark>
-  <!-- Hero -->
+  {/* Hero */}
   <section class="hero">
     <FlowBackground />
-    <!-- Showreel. Muted and inline so phones autoplay it; the smaller file is
+    {/* Showreel. Muted and inline so phones autoplay it; the smaller file is
          used on narrow screens, MP4 is the fallback for browsers without WebM.
-         Visitors who prefer reduced motion get the still poster instead. -->
+         Visitors who prefer reduced motion get the still poster instead. */}
     <video class="reel" autoplay muted loop playsinline preload="metadata" poster={base + 'video/hero-poster.jpg'} aria-hidden="true">
       <source media="(max-width: 768px)" src={base + 'video/hero-720.webm'} type="video/webm" />
       <source src={base + 'video/hero-1080.webm'} type="video/webm" />
@@ -59,7 +59,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     <a class="scroll" href="#services" aria-label="Scroll to services"><span></span></a>
   </section>
 
-  <!-- Toolkit marquee -->
+  {/* Toolkit marquee */}
   <div class="marquee" aria-label="Tools and technologies">
     <div class="track">
       {[0, 1].map((copy) => (
@@ -70,7 +70,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     </div>
   </div>
 
-  <!-- Services -->
+  {/* Services */}
   <section class="section" id="services">
     <div class="container">
       <div class="section-head reveal">
@@ -94,7 +94,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     </div>
   </section>
 
-  <!-- Featured work -->
+  {/* Featured work */}
   <section class="section work-band">
     <div class="container">
       <div class="section-head reveal">
@@ -108,7 +108,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     </div>
   </section>
 
-  <!-- About teaser -->
+  {/* About teaser */}
   <section class="section tint about">
     <div class="container about-grid">
       <div class="reveal">
@@ -133,7 +133,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     </div>
   </section>
 
-  <!-- Process -->
+  {/* Process */}
   <section class="section">
     <div class="container">
       <div class="section-head reveal">
@@ -174,7 +174,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     )
   }
 
-  <!-- CTA -->
+  {/* CTA */}
   <section class="cta-band">
     <div class="container cta reveal">
       <h2>Have an idea? Let’s turn it into reality.</h2>
