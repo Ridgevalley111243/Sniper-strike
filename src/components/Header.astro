@@ -34,6 +34,11 @@ const current = (href: string) => path.startsWith('/' + href);
         }
         <li><a class="btn btn-primary cta" href={base + 'contact/'}>Start a project</a></li>
       </ul>
+      <button class="theme" type="button" aria-pressed="false" data-theme-toggle>
+        <span class="to-dark"><Icon name="moon" size={20} /></span>
+        <span class="to-light"><Icon name="sun" size={20} /></span>
+        <span class="sr-only">Dark mode</span>
+      </button>
       <button class="menu" type="button" aria-expanded="false" aria-controls="nav-links" data-menu>
         <span class="open"><Icon name="menu" label="Open menu" /></span>
         <span class="shut"><Icon name="close" label="Close menu" /></span>
@@ -52,6 +57,22 @@ const current = (href: string) => path.startsWith('/' + href);
   button.addEventListener('click', () => setOpen(!header.classList.contains('is-open')));
   header.querySelectorAll('[data-nav] a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
   document.addEventListener('keydown', (e) => e.key === 'Escape' && setOpen(false));
+
+  // Theme toggle. The theme is applied before paint by the script in Base.astro.
+  const root = document.documentElement;
+  const toggle = header.querySelector<HTMLButtonElement>('[data-theme-toggle]')!;
+  const syncToggle = () => toggle.setAttribute('aria-pressed', String(root.dataset.theme === 'dark'));
+  toggle.addEventListener('click', () => {
+    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = next;
+    try {
+      localStorage.setItem('theme', next);
+    } catch {}
+    syncToggle();
+  });
+  new MutationObserver(syncToggle).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  syncToggle();
+
   const onScroll = () => header.classList.toggle('is-scrolled', window.scrollY > 8);
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
@@ -62,7 +83,7 @@ const current = (href: string) => path.startsWith('/' + href);
     position: sticky;
     top: 0;
     z-index: 50;
-    background: rgb(246 250 253 / 0.86);
+    background: var(--header-bg);
     backdrop-filter: saturate(1.4) blur(14px);
     -webkit-backdrop-filter: saturate(1.4) blur(14px);
     border-bottom: 1px solid transparent;
@@ -115,7 +136,7 @@ const current = (href: string) => path.startsWith('/' + href);
     background: rgb(74 127 167 / 0.12);
   }
   ul a[aria-current='page'] {
-    color: var(--blue-500);
+    color: var(--accent);
   }
   .over-dark ul a[aria-current='page'] {
     color: var(--blue-200);
@@ -126,6 +147,43 @@ const current = (href: string) => path.startsWith('/' + href);
   }
   .cta {
     margin-left: 8px;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .theme {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-left: 6px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  .theme:hover {
+    background: rgb(74 127 167 / 0.16);
+  }
+  .theme .to-light,
+  :global([data-theme='dark']) .theme .to-dark {
+    display: none;
+  }
+  :global([data-theme='dark']) .theme .to-light {
+    display: inline-flex;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
   .menu {
     display: none;
@@ -156,8 +214,8 @@ const current = (href: string) => path.startsWith('/' + href);
       align-items: stretch;
       gap: 4px;
       padding: 12px;
-      background: var(--white);
-      color: var(--navy-950);
+      background: var(--menu-bg);
+      color: var(--text);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow-lg);
@@ -177,11 +235,11 @@ const current = (href: string) => path.startsWith('/' + href);
     .cta,
     .over-dark .cta {
       margin: 6px 0 0;
-      background: var(--navy-950);
-      color: var(--white);
+      background: var(--inverse-bg);
+      color: var(--inverse-text);
     }
     .over-dark ul a[aria-current='page'] {
-      color: var(--blue-500);
+      color: var(--accent);
     }
   }
 </style>

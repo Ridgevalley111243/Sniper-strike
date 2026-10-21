@@ -63,7 +63,28 @@ const ragasFormat = { woff2: 'woff2', otf: 'opentype', ttf: 'truetype' }[ragas ?
         />
       )
     }
-    <script is:inline>document.documentElement.classList.add('js');</script>
+    <script is:inline>
+      // Runs before the page paints, so there's no flash of the wrong theme.
+      (function () {
+        var root = document.documentElement;
+        root.classList.add('js');
+        var saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch (e) {}
+        var system = matchMedia('(prefers-color-scheme: dark)');
+        root.dataset.theme = saved === 'light' || saved === 'dark' ? saved : system.matches ? 'dark' : 'light';
+        if (!saved) {
+          system.addEventListener('change', function (e) {
+            var chosen = null;
+            try {
+              chosen = localStorage.getItem('theme');
+            } catch (err) {}
+            if (!chosen) root.dataset.theme = e.matches ? 'dark' : 'light';
+          });
+        }
+      })();
+    </script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
