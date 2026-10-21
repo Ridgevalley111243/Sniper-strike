@@ -443,7 +443,7 @@ const building = projects.filter((p) => p.data.status === 'In development').slic
   .marquee li::before {
     content: '✦';
     margin-right: 44px;
-    color: var(--blue-500);
+    color: var(--accent);
   }
   @keyframes marquee {
     to {
@@ -493,7 +493,7 @@ const building = projects.filter((p) => p.data.status === 'In development').slic
   }
 
   .work-band {
-    background: linear-gradient(180deg, var(--mist-50), #eaf2f9);
+    background: linear-gradient(180deg, var(--bg), var(--surface-2));
   }
 
   /* About */
@@ -555,7 +555,7 @@ const building = projects.filter((p) => p.data.status === 'In development').slic
     display: block;
     font-family: var(--font-display);
     font-size: 2rem;
-    color: var(--blue-500);
+    color: var(--accent);
     margin-bottom: 10px;
   }
 

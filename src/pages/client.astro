@@ -237,7 +237,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 <style>
   .shell {
     min-height: 100svh;
-    background: var(--mist-50);
+    background: var(--bg);
   }
   .top {
     background: var(--navy-950);
@@ -298,7 +298,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     padding: 6px 14px;
     border-radius: 999px;
     background: rgb(74 127 167 / 0.14);
-    color: var(--navy-800);
+    color: var(--accent-strong);
     font-weight: 600;
     font-size: 0.85rem;
   }
@@ -332,7 +332,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     letter-spacing: 0.1em;
   }
   .item :global(.preview.loading) {
-    background: linear-gradient(100deg, #dfe9f3 30%, #eef4fa 50%, #dfe9f3 70%);
+    background: linear-gradient(100deg, var(--surface-2) 30%, var(--surface) 50%, var(--surface-2) 70%);
     background-size: 200% 100%;
     animation: shimmer 1.3s infinite;
   }
@@ -342,7 +342,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     }
   }
   .item :global(.preview:has(img)) {
-    background: #eaf2f9;
+    background: var(--surface-2);
   }
   .item :global(.preview img) {
     width: 100%;
