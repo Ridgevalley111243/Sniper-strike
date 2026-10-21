@@ -7,11 +7,11 @@ encrypted pages where clients view the work made for them.
 
 Built with [Astro](https://astro.build) (fast static pages, almost no JavaScript) and deployed to GitHub Pages by
 `.github/workflows/pages.yml` on every push to `main`:
-**https://ridgevalley111243.github.io/Sniper-strike/**
+**https://ridgevalley111243.github.io/trutechwebsite/**
 
 ```bash
 npm install
-npm run dev      # local preview at http://localhost:4321/Sniper-strike/
+npm run dev      # local preview at http://localhost:4321/trutechwebsite/
 npm run check    # type-check
 npm run build    # production build into dist/
 ```

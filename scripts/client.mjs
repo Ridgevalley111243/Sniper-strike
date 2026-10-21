@@ -12,7 +12,8 @@ import { createCipheriv, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 
-const SITE = 'https://ridgevalley111243.github.io/Sniper-strike';
+// Where the site is published (matches astro.config.mjs).
+const SITE = `${process.env.SITE_URL ?? 'https://ridgevalley111243.github.io'}${process.env.BASE_PATH ?? '/trutechwebsite'}`.replace(/\/$/, '');
 const PRIVATE = 'clients-private';
 const PUBLIC = 'public/c';
 const MAX_FILE = 95 * 1024 * 1024; // GitHub rejects files over 100 MB
