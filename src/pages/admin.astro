@@ -15,7 +15,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
     <section class="gate" data-view="login" hidden>
       <form class="card gate-card" data-login>
-        <Logo />
+        <Logo tone="light" />
         <h1>Admin sign in</h1>
         <div class="field">
           <label for="l-email">Email</label>
@@ -33,7 +33,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
     <section class="gate" data-view="password" hidden>
       <form class="card gate-card" data-new-password novalidate>
-        <Logo />
+        <Logo tone="light" />
         <h1>Choose your password</h1>
         <p class="muted">You signed in with a temporary password. Choose your own to continue: at least 10 characters.</p>
         <div class="field">
@@ -75,9 +75,30 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 </script>
 
 <style>
+  /* The admin is always black, whatever the site's light/dark setting. */
   .adm {
+    --bg: #000;
+    --surface: #0e0e0e;
+    --surface-2: #000;
+    --text: #f2f2f2;
+    --text-muted: #a8a8a8; /* 8.9:1 on black */
+    --border: #2a2a2a;
+    --accent: var(--blue-200);
+    --accent-strong: var(--blue-200);
+    --ring: var(--blue-200);
+    --field-bg: #000;
+    --inverse-bg: #fff;
+    --inverse-bg-hover: #dcdcdc;
+    --inverse-text: #000;
+    --shadow: none;
+    --shadow-lg: 0 0 0 1px #2a2a2a;
+    color-scheme: dark;
     min-height: 100svh;
-    background: var(--surface-2);
+    background: #000;
+    color: var(--text);
+  }
+  :global(body:has(.adm)) {
+    background: #000;
   }
   .gate {
     display: grid;
@@ -122,8 +143,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     position: sticky;
     top: 0;
     z-index: 20;
-    background: var(--navy-950);
-    color: var(--mist-50);
+    background: #000;
+    color: #fff;
+    border-bottom: 1px solid #222;
   }
   .adm-bar {
     display: flex;
@@ -161,16 +183,30 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     scrollbar-width: none;
   }
   .adm-nav a {
-    flex: none;
+    flex: 1 0 auto;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     min-height: 46px;
-    padding: 0 10px;
+    padding: 0 8px;
+    white-space: nowrap;
     border-bottom: 3px solid transparent;
-    color: #c4d6e6;
+    color: #b5b5b5;
     font-weight: 600;
     font-size: 0.93rem;
     text-decoration: none;
+  }
+  @media (max-width: 420px) {
+    .adm-nav a {
+      font-size: 0.82rem;
+      padding: 0 4px;
+    }
+  }
+  @media (min-width: 720px) {
+    .adm-nav a {
+      flex: none;
+      padding: 0 12px;
+    }
   }
   .adm-nav a[aria-current='page'] {
     color: var(--white);
@@ -188,13 +224,13 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     max-width: calc(100% - 32px);
     padding: 12px 18px;
     border-radius: 12px;
-    background: var(--navy-950);
-    color: var(--white);
-    box-shadow: var(--shadow-lg);
+    background: #fff;
+    color: #000;
     font-weight: 500;
   }
   .toast.bad {
     background: #8a1c1c;
+    color: #fff;
   }
 </style>
 
@@ -229,10 +265,21 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     resize: vertical;
     line-height: 1.55;
   }
+  .adm textarea.grow {
+    resize: none;
+    overflow: hidden;
+    line-height: 1.45;
+    field-sizing: content;
+  }
   .adm input:focus,
   .adm select:focus,
   .adm textarea:focus {
     border-color: var(--accent);
+  }
+  .adm .hint,
+  .adm .panel p,
+  .adm code {
+    overflow-wrap: anywhere;
   }
   .adm .hint {
     margin: 0;
@@ -243,8 +290,8 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     margin: 0;
     padding: 11px 14px;
     border-radius: var(--radius-sm);
-    background: #fdecec;
-    color: #8a1c1c;
+    background: #2a0e0e;
+    color: #ffb4b4;
   }
   .adm .check {
     display: flex;
@@ -256,19 +303,19 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   .adm .check input {
     width: 20px;
     height: 20px;
-    accent-color: var(--navy-800);
+    accent-color: var(--blue-200);
   }
   .adm .btn {
     min-height: 44px;
     padding: 0 18px;
   }
   .adm .btn-danger {
-    border-color: #b42318;
-    color: #b42318;
+    border-color: #ff6b5e;
+    color: #ff8a80;
     background: transparent;
   }
   .adm .btn-danger:hover {
-    background: #fdecec;
+    background: #2a0e0e;
   }
   .adm .btn-sm {
     min-height: 36px;
@@ -357,7 +404,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     height: 48px;
     border-radius: 8px;
     object-fit: cover;
-    background: linear-gradient(135deg, var(--navy-950), var(--blue-500));
+    background: linear-gradient(135deg, #1c1c1c, #333);
   }
   .adm .row strong {
     display: block;
@@ -382,12 +429,12 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     white-space: nowrap;
   }
   .adm .pill.warn {
-    background: #fff4d6;
-    color: #7a4a00;
+    background: #3a2a00;
+    color: #ffd27a;
   }
   .adm .pill.good {
-    background: #e3f5ec;
-    color: #14633f;
+    background: #0d2e1e;
+    color: #7fe0ad;
   }
   .adm .pill.muted {
     background: var(--surface-2);
@@ -476,7 +523,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   .adm .progress progress {
     width: 100%;
     height: 8px;
-    accent-color: var(--navy-800);
+    accent-color: var(--blue-200);
   }
   .adm .actions {
     display: flex;
@@ -541,23 +588,49 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     flex: none;
     display: grid;
     place-items: center;
-    width: 52px;
+    min-width: 52px;
+    max-width: 96px;
     height: 40px;
+    padding: 0 6px;
     border-radius: 8px;
-    background: var(--navy-950);
+    background: #1c1c1c;
     color: var(--blue-200);
-    font-size: 0.7rem;
+    font-size: 0.66rem;
     font-weight: 700;
     letter-spacing: 0.06em;
   }
+  .adm .file-row {
+    flex-wrap: wrap;
+  }
   .adm .file-row div {
-    flex: 1;
+    flex: 1 1 160px;
     min-width: 0;
   }
   .adm .file-row strong {
     display: block;
     overflow-wrap: anywhere;
     font-size: 0.95rem;
+  }
+  .adm .profile {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px;
+  }
+  .adm .profile img,
+  .adm .avatar-empty {
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border);
+  }
+  .adm .avatar-empty {
+    display: grid;
+    place-items: center;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.8rem;
   }
   .adm .socials {
     display: grid;

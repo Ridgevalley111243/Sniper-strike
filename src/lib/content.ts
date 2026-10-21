@@ -38,6 +38,8 @@ export type Settings = {
   phone: string;
   whatsapp: string;
   whatsappName: string;
+  /** Profile photo URL (uploaded in the admin), or '' for none. */
+  photo: string;
   socials: Social[];
 };
 
@@ -77,6 +79,7 @@ export function normalizeSettings(data: Record<string, unknown> | null | undefin
     phone: str(d.phone),
     whatsapp: str(d.whatsapp).replace(/\D/g, ''),
     whatsappName: str(d.whatsappName),
+    photo: /^https?:\/\//.test(str(d.photo)) ? str(d.photo) : '',
     socials: socials
       .map((s: Record<string, unknown>) => ({ label: str(s?.label), handle: str(s?.handle), url: str(s?.url), icon: str(s?.icon) }))
       .filter((s: Social) => s.url),
