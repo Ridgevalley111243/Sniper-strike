@@ -2,6 +2,7 @@
 import { site, whatsappLink } from '../site';
 import Icon from './Icon.astro';
 import Logo from './Logo.astro';
+import Text from './Text.astro';
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const year = new Date().getFullYear();
 ---
@@ -9,7 +10,7 @@ const year = new Date().getFullYear();
   <div class="container cols">
     <div class="brand">
       <Logo lazy />
-      <p class="muted">{site.tagline}</p>
+      <Text as="p" class="muted" k="brand.tagline" />
       {
         site.socials.length > 0 && (
           <ul class="socials" aria-label="Social media">
@@ -25,16 +26,16 @@ const year = new Date().getFullYear();
       }
     </div>
     <nav aria-label="Footer">
-      <h2 class="h">Explore</h2>
+      <Text as="h2" class="h" k="footer.explore" />
       <ul>
-        <li><a href={base + 'work/'}>Work</a></li>
-        <li><a href={base + 'services/'}>Services</a></li>
-        <li><a href={base + 'about/'}>About</a></li>
-        <li><a href={base + 'contact/'}>Contact</a></li>
+        <li><a href={base + 'work/'}><Text k="nav.work" /></a></li>
+        <li><a href={base + 'services/'}><Text k="nav.services" /></a></li>
+        <li><a href={base + 'about/'}><Text k="nav.about" /></a></li>
+        <li><a href={base + 'contact/'}><Text k="nav.contact" /></a></li>
       </ul>
     </nav>
     <div>
-      <h2 class="h">Get in touch</h2>
+      <Text as="h2" class="h" k="footer.contact" />
       <ul>
         {site.email && <li><a href={`mailto:${site.email}`}><Icon name="mail" size={18} /> {site.email}</a></li>}
         {site.phone && <li><a href={`tel:${site.phone.replace(/\s/g, '')}`}><Icon name="phone" size={18} /> {site.phone}</a></li>}
@@ -45,7 +46,7 @@ const year = new Date().getFullYear();
     {
       site.socials.length > 0 && (
         <div>
-          <h2 class="h">Follow</h2>
+          <Text as="h2" class="h" k="footer.follow" />
           <ul>
             {site.socials.map((s) => (
               <li>
@@ -60,8 +61,8 @@ const year = new Date().getFullYear();
     }
   </div>
   <div class="container legal muted">
-    <span>© {year} {site.brand}. All rights reserved.</span>
-    <nav class="legal-links" aria-label="Legal"><a href={base + 'terms/'}>Terms</a><a href={base + 'privacy/'}>Privacy</a></nav>
+    <span>© {year} {site.brand}. <Text k="footer.rights" /></span>
+    <nav class="legal-links" aria-label="Legal"><a href={base + 'terms/'}><Text k="footer.terms" /></a><a href={base + 'privacy/'}><Text k="footer.privacy" /></a></nav>
   </div>
 </footer>
 <style>

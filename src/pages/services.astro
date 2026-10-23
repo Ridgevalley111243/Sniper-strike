@@ -1,16 +1,14 @@
 ---
 import Icon from '../components/Icon.astro';
 import PageHero from '../components/PageHero.astro';
+import Text from '../components/Text.astro';
 import Base from '../layouts/Base.astro';
+import { t } from '../lib/t';
 import { site } from '../site';
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 ---
-<Base title="Services" description="Websites and web apps, management systems, digital commerce, branding, IT support and ICT training from Trutech Business.">
-  <PageHero
-    eyebrow="Services"
-    title="Everything you need to go digital."
-    lead="From your brand and website to the systems that run your business, built and supported by one person who understands the whole picture."
-  />
+<Base title={t('servicesPage.eyebrow')} description={t('servicesPage.lead')}>
+  <PageHero eyebrow="servicesPage.eyebrow" title="servicesPage.title" lead="servicesPage.lead" />
   <section class="section">
     <div class="container list">
       {
@@ -19,10 +17,10 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
             <span class="n">{String(i + 1).padStart(2, '0')}</span>
             <div class="title">
               <span class="icon"><Icon name={s.icon} /></span>
-              <h2>{s.title}</h2>
+              <Text as="h2" k={`service.${i + 1}.title`} />
             </div>
             <div>
-              <p class="lead">{s.text}</p>
+              <Text as="p" class="lead" k={`service.${i + 1}.text`} />
               <ul class="tags">{s.points.map((pt) => <li class="tag">{pt}</li>)}</ul>
             </div>
           </article>
@@ -32,9 +30,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   </section>
   <section class="section dark">
     <div class="container center reveal">
-      <h2>Not sure what you need?</h2>
-      <p class="lead">Describe the problem and I’ll suggest the simplest thing that solves it.</p>
-      <a class="btn btn-light" href={base + 'contact/'}>Talk to me <Icon name="arrow" /></a>
+      <Text as="h2" k="servicesPage.askTitle" />
+      <Text as="p" class="lead" k="servicesPage.askText" />
+      <a class="btn btn-light" href={base + 'contact/'}><Text k="servicesPage.askButton" /> <Icon name="arrow" /></a>
     </div>
   </section>
 </Base>

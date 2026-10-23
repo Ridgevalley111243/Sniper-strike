@@ -6,14 +6,23 @@
 import Icon from '../components/Icon.astro';
 import Logo from '../components/Logo.astro';
 import Base from '../layouts/Base.astro';
+import { t } from '../lib/t';
+import { DEFAULTS } from '../lib/texts';
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+// Wording for the messages the script below shows (Site text: Client page).
+const words = Object.fromEntries(
+  Object.keys(DEFAULTS)
+    .filter((k) => k.startsWith('client.'))
+    .map((k) => [k.slice('client.'.length), t(k)]),
+);
+const [agreeA, agreeB = '', agreeC = ''] = t('client.agree').split(/\{terms\}|\{privacy\}/);
 ---
 <Base title="Your project" noindex bare>
-  <div class="shell">
+  <div class="shell" data-words={JSON.stringify(words)}>
     <header class="top">
       <div class="container bar">
         <a href={base} aria-label="Trutech Business home"><Logo /></a>
-        <span class="secure"><Icon name="lock" size={16} /> Private link</span>
+        <span class="secure"><Icon name="lock" size={16} /> {t('client.private')}</span>
       </div>
     </header>
 
@@ -38,9 +47,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     </section>
 
     <section class="container state" data-state="error" hidden>
-      <h1>We couldn’t open this link.</h1>
-      <p class="lead" data-error>Check that you used the complete link you were sent.</p>
-      <a class="btn btn-primary" href={base + 'contact/'}>Contact Trutech Business</a>
+      <h1>{t('client.errorTitle')}</h1>
+      <p class="lead" data-error>{t('client.errIncomplete')}</p>
+      <a class="btn btn-primary" href={base + 'contact/'}>{t('client.errorButton')}</a>
     </section>
 
     <div class="container delivery" data-state="ready" hidden>
@@ -52,24 +61,24 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
       </div>
       <p class="lead message" data-field="message"></p>
 
-      <h2 class="h2">Files</h2>
+      <h2 class="h2">{t('client.files')}</h2>
       <div class="files" data-files></div>
 
       <section class="card review" data-review aria-labelledby="review-title">
-        <h2 id="review-title" data-review-title>Your feedback</h2>
+        <h2 id="review-title" data-review-title>{t('client.feedbackTitle')}</h2>
         <p class="muted" data-review-intro></p>
         <form data-form novalidate>
           <div class="field">
-            <label for="r-name">Your name</label>
+            <label for="r-name">{t('client.name')}</label>
             <input id="r-name" name="name" autocomplete="name" maxlength="120" required />
           </div>
           <fieldset class="field choices" data-decisions>
-            <legend>Your decision</legend>
-            <label class="choice"><input type="radio" name="decision" value="approve" checked /> <span><strong>Approve</strong> It’s ready</span></label>
-            <label class="choice"><input type="radio" name="decision" value="changes" /> <span><strong>Request changes</strong> Tell me what to change</span></label>
+            <legend>{t('client.decision')}</legend>
+            <label class="choice"><input type="radio" name="decision" value="approve" checked /> <span><strong>{t('client.approve')}</strong> {t('client.approveNote')}</span></label>
+            <label class="choice"><input type="radio" name="decision" value="changes" /> <span><strong>{t('client.changes')}</strong> {t('client.changesNote')}</span></label>
           </fieldset>
           <fieldset class="field stars" data-rating hidden>
-            <legend>Your rating</legend>
+            <legend>{t('client.rating')}</legend>
             <div class="star-row">
               {[5, 4, 3, 2, 1].map((n) => (
                 <label class="star">
@@ -81,28 +90,31 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
             </div>
           </fieldset>
           <div class="field">
-            <label for="r-comment" data-comment-label>Comments</label>
-            <textarea id="r-comment" name="comment" rows="5" maxlength="4000" placeholder="What do you like, and what should change?"></textarea>
+            <label for="r-comment" data-comment-label>{t('client.comments')}</label>
+            <textarea id="r-comment" name="comment" rows="5" maxlength="4000" placeholder={t('client.placeholder')}></textarea>
           </div>
           <p class="error" role="alert" data-form-error hidden></p>
-          <button class="btn btn-primary" type="submit" data-submit><Icon name="whatsapp" /> <span>Send feedback</span></button>
-          <p class="hint muted">Your feedback is saved and opens in WhatsApp, ready to send to Trutech Business. By sending it you agree to our <a href={base + 'terms/'}>Terms</a> and <a href={base + 'privacy/'}>Privacy Policy</a>.</p>
+          <button class="btn btn-primary" type="submit" data-submit><Icon name="whatsapp" /> <span>{t('client.send')}</span></button>
+          <p class="hint muted">
+            {t('client.hint')}
+            {agreeA}<a href={base + 'terms/'}>{t('terms.title')}</a>{agreeB}<a href={base + 'privacy/'}>{t('privacy.title')}</a>{agreeC}
+          </p>
         </form>
         <div class="thanks" data-thanks hidden>
-          <h3>Thank you! Your feedback is saved.</h3>
-          <p class="muted">If WhatsApp didn’t open, tap below to send it.</p>
-          <a class="btn btn-primary" data-wa target="_blank" rel="noopener"><Icon name="whatsapp" /> Send on WhatsApp</a>
+          <h3>{t('client.thanksTitle')}</h3>
+          <p class="muted">{t('client.thanksText')}</p>
+          <a class="btn btn-primary" data-wa target="_blank" rel="noopener"><Icon name="whatsapp" /> {t('client.thanksButton')}</a>
         </div>
       </section>
 
       <section class="history" data-history hidden>
-        <h2 class="h2">Earlier feedback</h2>
+        <h2 class="h2">{t('client.earlier')}</h2>
         <ul data-history-list></ul>
       </section>
 
       <p class="foot muted">
-        These files were prepared for you by Trutech Business. Please don’t share this link: anyone with it can view them.
-        <a href={base + 'terms/'}>Terms</a> · <a href={base + 'privacy/'}>Privacy</a>
+        {t('client.foot')}
+        <a href={base + 'terms/'}>{t('footer.terms')}</a> · <a href={base + 'privacy/'}>{t('footer.privacy')}</a>
       </p>
     </div>
   </div>
@@ -127,11 +139,14 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     whatsapp: string;
   };
 
+  // Wording from Site text (see the page above).
+  const W: Record<string, string> = JSON.parse(document.querySelector<HTMLElement>('.shell')!.dataset.words ?? '{}');
+  const fill = (s: string, vars: Record<string, string>) => s.replace(/\{(\w+)\}/g, (m, n) => vars[n] ?? m);
   const STATUS: Record<string, string> = {
-    awaiting_review: 'Awaiting your review',
-    changes_requested: 'Changes requested',
-    approved: 'Approved',
-    delivered: 'Delivered',
+    awaiting_review: W['status.awaiting'],
+    changes_requested: W['status.changes'],
+    approved: W['status.approved'],
+    delivered: W['status.delivered'],
   };
   const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
   const show = (state: string) =>
@@ -176,8 +191,8 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
             ? `<div class="preview icon">♪<audio src="${url}" controls preload="none"></audio></div>`
             : `<div class="preview icon"><span class="ext">${esc(ext(f.name))}</span></div>`;
     const actions = [
-      kind === 'pdf' && url ? `<a class="btn btn-ghost" href="${url}" target="_blank" rel="noopener">View PDF</a>` : '',
-      f.download ? `<a class="btn btn-primary" href="${esc(f.download)}">Download</a>` : '',
+      kind === 'pdf' && url ? `<a class="btn btn-ghost" href="${url}" target="_blank" rel="noopener">${esc(W.viewPdf)}</a>` : '',
+      f.download ? `<a class="btn btn-primary" href="${esc(f.download)}">${esc(W.download)}</a>` : '',
     ].join('');
     return `<article class="file card">${preview}<div class="info"><h3 class="name">${esc(f.name)}</h3><p class="muted">${esc(ext(f.name))} · ${size(f.size)}</p><div class="actions">${actions}</div></div></article>`;
   }
@@ -199,11 +214,11 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
               : `<div class="preview icon"><span class="ext">${esc(ext(f.name))}</span></div>`;
     const action =
       kind === 'pdf' && url
-        ? '<button class="btn btn-ghost" type="button" data-open-pdf>View PDF</button>'
+        ? `<button class="btn btn-ghost" type="button" data-open-pdf>${esc(W.viewPdf)}</button>`
         : kind === 'file'
-          ? '<p class="note">View only: you’ll receive this file once the work is approved.</p>'
+          ? `<p class="note">${esc(W.viewOnlyNote)}</p>`
           : '';
-    return `<article class="file card">${preview}<div class="info"><h3 class="name">${esc(f.name)}</h3><p class="muted">${esc(ext(f.name))} · ${size(f.size)} · view only</p><div class="actions">${action}</div></div></article>`;
+    return `<article class="file card">${preview}<div class="info"><h3 class="name">${esc(f.name)}</h3><p class="muted">${esc(ext(f.name))} · ${size(f.size)} · ${esc(W.viewOnly)}</p><div class="actions">${action}</div></div></article>`;
   }
 
   function protect(d: Delivery) {
@@ -279,7 +294,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
   function history(reviews: Review[]) {
     const label = (r: Review) =>
-      r.decision === 'approve' ? 'Approved' : r.decision === 'changes' ? 'Requested changes' : 'Feedback';
+      r.decision === 'approve' ? W['status.approved'] : r.decision === 'changes' ? W['status.changes'] : W.earlier;
     $('[data-history-list]').innerHTML = reviews
       .slice()
       .reverse()
@@ -295,14 +310,14 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     const verdict =
       decision === 'approve'
         ? d.kind === 'delivery'
-          ? 'I have received the files.'
-          : '✅ I approve this work.'
+          ? W.waReceived
+          : W.waApprove
         : decision === 'changes'
-          ? '✏️ I would like some changes.'
-          : 'Here is my feedback.';
+          ? W.waChanges
+          : '';
     return [
-      `Hello Trutech Business, this is ${name || d.client_name}.`,
-      `Project: ${d.title}`,
+      fill(W.waHello, { name: name || d.client_name }),
+      fill(W.waProject, { project: d.title }),
       verdict,
       rating ? `Rating: ${'★'.repeat(rating)} (${rating}/5)` : '',
       comment ? `\n${comment}` : '',
@@ -315,13 +330,11 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   function setupForm(d: Delivery) {
     const form = $<HTMLFormElement>('[data-form]');
     const isDelivery = d.kind === 'delivery';
-    $('[data-review-title]').textContent = isDelivery ? 'Leave a review' : 'Your feedback';
-    $('[data-review-intro]').textContent = isDelivery
-      ? 'Let me know you have everything, and how the work went.'
-      : 'Approve the work, or tell me what you’d like changed.';
+    $('[data-review-title]').textContent = isDelivery ? W.reviewTitle : W.feedbackTitle;
+    $('[data-review-intro]').textContent = isDelivery ? W.reviewIntro : W.feedbackIntro;
     $('[data-decisions]').hidden = isDelivery;
     $('[data-rating]').hidden = !isDelivery;
-    $('[data-comment-label]').textContent = isDelivery ? 'Your review (optional)' : 'Comments';
+    $('[data-comment-label]').textContent = isDelivery ? W.reviewComments : W.comments;
     (form.elements.namedItem('name') as HTMLInputElement).value = d.client_name;
 
     form.addEventListener('submit', async (e) => {
@@ -333,13 +346,13 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
       const comment = String(data.get('comment') ?? '').trim();
       const error = $('[data-form-error]');
       error.hidden = true;
-      if (!name) return Object.assign(error, { hidden: false, textContent: 'Please enter your name.' });
+      if (!name) return Object.assign(error, { hidden: false, textContent: W.errName });
       if (decision === 'changes' && !comment)
-        return Object.assign(error, { hidden: false, textContent: 'Please describe the changes you’d like.' });
+        return Object.assign(error, { hidden: false, textContent: W.errChanges });
 
       const submit = $<HTMLButtonElement>('[data-submit]');
       submit.disabled = true;
-      submit.querySelector('span')!.textContent = 'Sending…';
+      submit.querySelector('span')!.textContent = W.sending;
       try {
         const res = await api({ method: 'POST', body: JSON.stringify({ t: token, name, decision, rating, comment }) });
         if (!res.ok) throw new Error(String(res.status));
@@ -352,22 +365,22 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
         location.href = wa;
       } catch {
         submit.disabled = false;
-        submit.querySelector('span')!.textContent = 'Send feedback';
-        Object.assign(error, { hidden: false, textContent: 'Sorry, that didn’t go through. Please check your connection and try again.' });
+        submit.querySelector('span')!.textContent = W.send;
+        Object.assign(error, { hidden: false, textContent: W.errSend });
       }
     });
   }
 
   async function main() {
-    if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return fail('This link is incomplete. Please use the full link you were sent.');
+    if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return fail(W.errIncomplete);
     let d: Delivery;
     try {
       const res = await api(undefined, `?t=${encodeURIComponent(token)}`);
-      if (res.status === 404) return fail('This link is no longer active. Please contact Trutech Business for a new one.');
+      if (res.status === 404) return fail(W.errInactive);
       if (!res.ok) throw new Error(String(res.status));
       d = await res.json();
     } catch {
-      return fail('We couldn’t reach the server. Please check your connection and try again.');
+      return fail(W.errNetwork);
     }
     set('client', d.client_name);
     set('title', d.title);
@@ -377,7 +390,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     document.title = `${d.title} · Trutech Business`;
     $('[data-files]').innerHTML = d.files.length
       ? d.files.map((f) => fileCard(f, d.allow_download)).join('')
-      : '<p class="muted">Files will appear here soon.</p>';
+      : `<p class="muted">${esc(W.noFiles)}</p>`;
     if (!d.allow_download) protect(d);
     history(d.reviews);
     setupForm(d);

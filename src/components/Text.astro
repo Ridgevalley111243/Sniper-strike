@@ -1,0 +1,18 @@
+---
+// One piece of site text (edited in the admin under Site text). The element
+// carries data-t so src/scripts/texts.ts can show newer wording before the
+// next rebuild.
+import type { HTMLTag } from 'astro/types';
+import { kindOf, t } from '../lib/t';
+import { formatText } from '../lib/render';
+
+interface Props {
+  k: string;
+  as?: HTMLTag;
+  class?: string;
+  [attr: string]: unknown;
+}
+const { k, as: Tag = 'span', class: className, ...rest } = Astro.props;
+const kind = kindOf(k);
+---
+<Tag class={className} data-t={k} data-t-kind={kind} {...rest} set:html={formatText(kind, t(k))} />

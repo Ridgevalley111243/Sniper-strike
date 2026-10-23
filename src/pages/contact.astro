@@ -1,53 +1,64 @@
 ---
 import Icon from '../components/Icon.astro';
 import PageHero from '../components/PageHero.astro';
+import Text from '../components/Text.astro';
 import Base from '../layouts/Base.astro';
+import { t } from '../lib/t';
 import { site, whatsappLink } from '../site';
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const hasChannel = Boolean(site.email || site.whatsapp);
 ---
-<Base title="Contact" description="Start a project with Trutech Business: websites, systems, branding and IT support in Ghana.">
-  <PageHero eyebrow="Contact" title="Let’s turn your idea into reality." lead="Tell me a little about what you need. I usually reply within a day." />
+<Base title={t('contact.eyebrow')} description={t('contact.lead')}>
+  <PageHero eyebrow="contact.eyebrow" title="contact.title" lead="contact.lead" />
   <section class="section">
     <div class="container layout">
-      <form class="card form reveal" data-form data-email={site.email} data-whatsapp={site.whatsapp}>
+      <form
+        class="card form reveal"
+        data-form
+        data-email={site.email}
+        data-whatsapp={site.whatsapp}
+        data-greeting={t('contact.greeting')}
+        data-my-name={t('contact.myName')}
+        data-i-need={t('contact.iNeed')}
+        data-subject={t('contact.subject')}
+      >
         <div class="field">
-          <label for="name">Your name</label>
+          <label for="name"><Text k="contact.name" /></label>
           <input id="name" name="name" autocomplete="name" required />
         </div>
         <div class="field">
-          <label for="topic">What do you need?</label>
+          <label for="topic"><Text k="contact.need" /></label>
           <select id="topic" name="topic">
             {site.services.map((s) => <option>{s.title}</option>)}
-            <option>Something else</option>
+            <option>{t('contact.other')}</option>
           </select>
         </div>
         <div class="field">
-          <label for="message">Project details</label>
-          <textarea id="message" name="message" rows="6" required placeholder="What are you trying to achieve, and by when?"></textarea>
-          <p class="hint">Your message opens in WhatsApp or your email app, ready to send. Nothing is stored on this website. See our <a href={base + 'privacy/'}>Privacy Policy</a>.</p>
+          <label for="message"><Text k="contact.details" /></label>
+          <textarea id="message" name="message" rows="6" required placeholder={t('contact.placeholder')}></textarea>
+          <p class="hint"><Text k="contact.hint" /> <a href={base + 'privacy/'}><Text k="contact.privacy" /></a></p>
         </div>
         {
           hasChannel ? (
             <div class="actions">
               {site.whatsapp && (
                 <button class="btn btn-primary" type="submit" value="whatsapp">
-                  <Icon name="whatsapp" /> Send on WhatsApp
+                  <Icon name="whatsapp" /> <Text k="contact.whatsapp" />
                 </button>
               )}
               {site.email && (
                 <button class="btn btn-ghost" type="submit" value="email">
-                  <Icon name="mail" /> Send by email
+                  <Icon name="mail" /> <Text k="contact.email" />
                 </button>
               )}
             </div>
           ) : (
-            <p class="notice" role="status">Contact details are being set up. Please check back soon.</p>
+            <Text as="p" class="notice" role="status" k="contact.notice" />
           )
         }
       </form>
       <div class="reveal ways-col">
-        <h2>Other ways to reach me</h2>
+        <Text as="h2" k="contact.ways" />
         <ul class="ways">
           {site.email && <li><a href={`mailto:${site.email}`}><Icon name="mail" /> {site.email}</a></li>}
           {site.phone && <li><a href={`tel:${site.phone.replace(/\s/g, '')}`}><Icon name="phone" /> {site.phone}</a></li>}
@@ -66,11 +77,13 @@ const hasChannel = Boolean(site.email || site.whatsapp);
     if (!form.reportValidity()) return;
     const data = new FormData(form);
     const via = (e.submitter as HTMLButtonElement | null)?.value ?? 'email';
-    const text = `Hello Trutech Business,\n\nMy name is ${data.get('name')}.\nI need: ${data.get('topic')}\n\n${data.get('message')}`;
+    const d = form.dataset;
+    const fill = (s = '') => s.replace('{name}', String(data.get('name'))).replace('{service}', String(data.get('topic')));
+    const text = `${d.greeting}\n\n${fill(d.myName)}\n${fill(d.iNeed)}\n\n${data.get('message')}`;
     if (via === 'whatsapp' && form.dataset.whatsapp) {
       window.open(`https://wa.me/${form.dataset.whatsapp}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
     } else if (form.dataset.email) {
-      const subject = `New project: ${data.get('topic')}`;
+      const subject = fill(d.subject);
       window.location.href = `mailto:${form.dataset.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
     }
   });

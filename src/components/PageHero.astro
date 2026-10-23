@@ -1,17 +1,21 @@
 ---
+// Page title area. eyebrow, title and lead are Site text keys; leadText
+// replaces the lead with ready-made text (such as a date).
+import Text from './Text.astro';
 interface Props {
   eyebrow: string;
   title: string;
   lead?: string;
+  leadText?: string;
 }
-const { eyebrow, title, lead } = Astro.props;
+const { eyebrow, title, lead, leadText } = Astro.props;
 ---
 <section class="page-hero">
   <span class="watermark" aria-hidden="true">TRUTECH</span>
   <div class="container inner">
-    <p class="eyebrow">{eyebrow}</p>
-    <h1>{title}</h1>
-    {lead && <p class="lead">{lead}</p>}
+    <Text as="p" class="eyebrow" k={eyebrow} />
+    <Text as="h1" k={title} />
+    {leadText ? <p class="lead">{leadText}</p> : lead && <Text as="p" class="lead" k={lead} />}
     <slot />
   </div>
 </section>
