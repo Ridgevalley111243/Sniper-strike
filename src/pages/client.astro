@@ -199,26 +199,28 @@ const [agreeA, agreeB = '', agreeC = ''] = t('client.agree').split(/\{terms\}|\{
 
   // View-only files (downloads off): shown inside the page with a watermark,
   // without links to the files themselves. Websites can't block screenshots;
-  // this makes copies harder to take and marks the ones that are.
+  // this makes copies harder to take and marks the ones that are. Images,
+  // videos and PDFs also open full screen, with the same protection.
   function protectedCard(f: FileItem, kind: string, url: string) {
     const wm = '<div class="wm" aria-hidden="true"></div>';
+    const viewable = ['image', 'video', 'pdf'].includes(kind) && url;
     const preview =
       kind === 'image' && url
-        ? `<div class="preview guarded"><canvas data-image="${url}" role="img" aria-label="${esc(f.name)}"></canvas>${wm}</div>`
+        ? `<div class="preview guarded zoomable" data-view role="button" tabindex="0" aria-label="${esc(W.fullScreen)}: ${esc(f.name)}"><canvas data-image="${url}" role="img" aria-label="${esc(f.name)}"></canvas>${wm}</div>`
         : kind === 'video' && url
           ? `<div class="preview guarded"><video src="${url}" controls controlslist="nodownload noplaybackrate noremoteplayback" disablepictureinpicture preload="metadata"></video>${wm}</div>`
           : kind === 'audio' && url
             ? `<div class="preview icon">♪<audio src="${url}" controls controlslist="nodownload noplaybackrate" preload="none"></audio></div>`
             : kind === 'pdf' && url
-              ? `<div class="preview guarded pdf" data-pdf="${url}"><span class="ext">PDF</span>${wm}</div>`
+              ? `<div class="preview guarded pdf"><span class="ext">PDF</span>${wm}</div>`
               : `<div class="preview icon"><span class="ext">${esc(ext(f.name))}</span></div>`;
-    const action =
-      kind === 'pdf' && url
-        ? `<button class="btn btn-ghost" type="button" data-open-pdf>${esc(W.viewPdf)}</button>`
-        : kind === 'file'
+    const action = viewable
+      ? `<button class="btn btn-ghost" type="button" data-view>${esc(kind === 'pdf' ? W.viewPdf : W.fullScreen)}</button>`
+      : kind === 'file'
           ? `<p class="note">${esc(W.viewOnlyNote)}</p>`
           : '';
-    return `<article class="file card">${preview}<div class="info"><h3 class="name">${esc(f.name)}</h3><p class="muted">${esc(ext(f.name))} · ${size(f.size)} · ${esc(W.viewOnly)}</p><div class="actions">${action}</div></div></article>`;
+    const data = viewable ? ` data-kind="${kind}" data-url="${url}" data-name="${esc(f.name)}"` : '';
+    return `<article class="file card"${data}>${preview}<div class="info"><h3 class="name">${esc(f.name)}</h3><p class="muted">${esc(ext(f.name))} · ${size(f.size)} · ${esc(W.viewOnly)}</p><div class="actions">${action}</div></div></article>`;
   }
 
   function protect(d: Delivery) {
@@ -234,45 +236,173 @@ const [agreeA, agreeB = '', agreeC = ''] = t('client.agree').split(/\{terms\}|\{
 
     // Images are drawn on a canvas with the watermark baked in, so there's no
     // image to save, drag or open on its own.
-    document.querySelectorAll<HTMLCanvasElement>('canvas[data-image]').forEach((canvas) => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, 1600 / img.naturalWidth);
-        canvas.width = Math.round(img.naturalWidth * scale);
-        canvas.height = Math.round(img.naturalHeight * scale);
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        ctx.save();
-        ctx.font = `600 ${Math.max(14, Math.round(canvas.width / 34))}px Montserrat, Arial, sans-serif`;
-        ctx.fillStyle = 'rgba(255,255,255,0.45)';
-        ctx.strokeStyle = 'rgba(10,25,49,0.35)';
-        ctx.lineWidth = 1;
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(-0.42);
-        const step = Math.max(120, canvas.width / 5);
-        for (let y = -canvas.height; y < canvas.height; y += step) {
-          for (let x = -canvas.width; x < canvas.width; x += ctx.measureText(mark).width + 60) {
-            ctx.fillText(mark, x, y);
-            ctx.strokeText(mark, x, y);
-          }
+    const images = new Map<string, Promise<HTMLImageElement>>();
+    const load = (url: string) => {
+      if (!images.has(url))
+        images.set(
+          url,
+          new Promise((ok, fail) => {
+            const img = new Image();
+            img.onload = () => ok(img);
+            img.onerror = fail;
+            img.src = url;
+          }),
+        );
+      return images.get(url)!;
+    };
+    const drawMarked = (canvas: HTMLCanvasElement, img: HTMLImageElement, maxWidth: number) => {
+      const scale = Math.min(1, maxWidth / img.naturalWidth);
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.font = `600 ${Math.max(14, Math.round(canvas.width / 34))}px Montserrat, Arial, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.strokeStyle = 'rgba(10,25,49,0.35)';
+      ctx.lineWidth = Math.max(1, canvas.width / 1600);
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(-0.42);
+      const step = Math.max(120, canvas.width / 5);
+      for (let y = -canvas.height; y < canvas.height; y += step) {
+        for (let x = -canvas.width; x < canvas.width; x += ctx.measureText(mark).width + 60) {
+          ctx.fillText(mark, x, y);
+          ctx.strokeText(mark, x, y);
         }
-        ctx.restore();
-      };
-      img.src = canvas.dataset.image!;
-    });
-
-    // PDFs open inside the page, without the viewer's download toolbar.
-    $('[data-files]').addEventListener('click', (e) => {
-      const b = (e.target as HTMLElement).closest('[data-open-pdf]');
-      if (!b) return;
-      const box = b.closest('.file')!.querySelector<HTMLElement>('[data-pdf]')!;
-      box.innerHTML = `<iframe src="${esc(box.dataset.pdf!)}#toolbar=0&navpanes=0&statusbar=0" title="PDF preview"></iframe><div class="wm" aria-hidden="true"></div>`;
-      box.classList.add('expanded');
-      b.remove();
+      }
+      ctx.restore();
+    };
+    document.querySelectorAll<HTMLCanvasElement>('canvas[data-image]').forEach((canvas) => {
+      load(canvas.dataset.image!)
+        .then((img) => drawMarked(canvas, img, 1600))
+        .catch(() => {});
     });
 
     const files = $('[data-files]');
-    ['contextmenu', 'dragstart', 'copy'].forEach((type) => files.addEventListener(type, (e) => e.preventDefault()));
+    files.addEventListener('click', (e) => {
+      const card = (e.target as HTMLElement).closest('[data-view]')?.closest<HTMLElement>('.file');
+      if (card) openViewer(card.dataset.kind!, card.dataset.url!, card.dataset.name!);
+    });
+    files.addEventListener('keydown', (e) => {
+      const el = e.target as HTMLElement;
+      if ((e.key === 'Enter' || e.key === ' ') && el.matches('.zoomable[data-view]')) {
+        e.preventDefault();
+        el.click();
+      }
+    });
+
+    // Full-screen view. It stays inside this page, so the watermark, the
+    // blur and the blocked right-click, saving and printing all still apply.
+    const viewer = document.createElement('div');
+    viewer.className = 'viewer';
+    viewer.hidden = true;
+    viewer.setAttribute('role', 'dialog');
+    viewer.setAttribute('aria-modal', 'true');
+    viewer.innerHTML = `<div class="v-bar"><p class="v-name" data-v-name></p><div class="v-tools">
+        <button type="button" class="v-btn" data-zoom="-1" aria-label="${esc(W.zoomOut)}">−</button>
+        <span class="v-level" data-v-level aria-live="polite"></span>
+        <button type="button" class="v-btn" data-zoom="1" aria-label="${esc(W.zoomIn)}">+</button>
+        <button type="button" class="v-btn v-close" data-v-close>${esc(W.close)} ✕</button></div></div>
+      <div class="v-stage" data-v-stage></div>`;
+    shell.append(viewer);
+    const stage = viewer.querySelector<HTMLElement>('[data-v-stage]')!;
+    const levels = [1, 1.5, 2, 3, 4];
+    let level = 0;
+    let canvas: HTMLCanvasElement | null = null;
+    let opener: HTMLElement | null = null;
+    // Shows the image at the zoom level, keeping the middle of the view in place.
+    const fit = () => {
+      if (!canvas?.width) return;
+      const cx = (stage.scrollLeft + stage.clientWidth / 2) / (stage.scrollWidth || 1);
+      const cy = (stage.scrollTop + stage.clientHeight / 2) / (stage.scrollHeight || 1);
+      const base = Math.min(stage.clientWidth / canvas.width, stage.clientHeight / canvas.height);
+      canvas.style.width = `${Math.round(canvas.width * base * levels[level])}px`;
+      stage.classList.toggle('zoomed', level > 0);
+      viewer.querySelector('[data-v-level]')!.textContent = `${Math.round(levels[level] * 100)}%`;
+      stage.scrollLeft = cx * stage.scrollWidth - stage.clientWidth / 2;
+      stage.scrollTop = cy * stage.scrollHeight - stage.clientHeight / 2;
+    };
+    const zoom = (by: number) => {
+      level = Math.min(levels.length - 1, Math.max(0, level + by));
+      fit();
+    };
+    function openViewer(kind: string, url: string, name: string) {
+      opener = document.activeElement as HTMLElement;
+      level = 0;
+      canvas = null;
+      viewer.setAttribute('aria-label', name);
+      viewer.querySelector('[data-v-name]')!.textContent = name;
+      viewer.classList.toggle('can-zoom', kind === 'image');
+      const wm = '<div class="wm" aria-hidden="true"></div>';
+      if (kind === 'image') {
+        stage.innerHTML = `<canvas role="img" aria-label="${esc(name)}"></canvas>`;
+        canvas = stage.querySelector('canvas')!;
+        const c = canvas;
+        load(url)
+          .then((img) => {
+            if (c !== canvas) return;
+            drawMarked(c, img, 2400);
+            fit();
+          })
+          .catch(() => {});
+      } else if (kind === 'video') {
+        stage.innerHTML = `<div class="v-media"><video src="${esc(url)}" controls autoplay playsinline controlslist="nodownload noplaybackrate noremoteplayback nofullscreen" disablepictureinpicture></video>${wm}</div>`;
+      } else {
+        // PDFs show without the viewer's download and print toolbar.
+        stage.innerHTML = `<div class="v-media v-pdf"><iframe src="${esc(url)}#toolbar=0&navpanes=0&statusbar=0&view=FitH" title="${esc(name)}"></iframe>${wm}</div>`;
+      }
+      viewer.hidden = false;
+      document.documentElement.classList.add('viewing');
+      viewer.requestFullscreen?.().catch(() => {});
+      viewer.querySelector<HTMLButtonElement>('[data-v-close]')!.focus();
+    }
+    function closeViewer() {
+      if (viewer.hidden) return;
+      viewer.hidden = true;
+      stage.innerHTML = '';
+      canvas = null;
+      document.documentElement.classList.remove('viewing');
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      opener?.focus();
+    }
+    viewer.addEventListener('click', (e) => {
+      const el = e.target as HTMLElement;
+      if (el.closest('[data-v-close]')) closeViewer();
+      const z = el.closest<HTMLElement>('[data-zoom]');
+      if (z) zoom(Number(z.dataset.zoom));
+    });
+    // Double-click or double-tap zooms in; again at the closest level, back out.
+    stage.addEventListener('dblclick', () => {
+      if (!canvas) return;
+      level = level < levels.length - 1 ? level + 1 : 0;
+      fit();
+    });
+    // Drag to move around a zoomed image.
+    stage.addEventListener('pointerdown', (e) => {
+      if (!canvas || level === 0 || e.pointerType === 'touch') return;
+      let last = { x: e.clientX, y: e.clientY };
+      stage.setPointerCapture(e.pointerId);
+      const move = (ev: PointerEvent) => {
+        stage.scrollLeft -= ev.clientX - last.x;
+        stage.scrollTop -= ev.clientY - last.y;
+        last = { x: ev.clientX, y: ev.clientY };
+      };
+      const end = () => stage.removeEventListener('pointermove', move);
+      stage.addEventListener('pointermove', move);
+      stage.addEventListener('pointerup', end, { once: true });
+      stage.addEventListener('pointercancel', end, { once: true });
+    });
+    addEventListener('resize', fit);
+    addEventListener('keydown', (e) => {
+      if (viewer.hidden) return;
+      if (e.key === 'Escape') closeViewer();
+      if (e.key === '+' || e.key === '=') zoom(1);
+      if (e.key === '-') zoom(-1);
+    });
+
+    [files, viewer].forEach((el) =>
+      ['contextmenu', 'dragstart', 'copy'].forEach((type) => el.addEventListener(type, (e) => e.preventDefault())),
+    );
     // Blur the files whenever the page isn't in front: switching apps, opening
     // a screenshot or recording tool, or pressing Print Screen.
     const shield = (on: boolean) => shell.classList.toggle('shielded', on);
@@ -574,20 +704,141 @@ const [agreeA, agreeB = '', agreeC = ''] = t('client.agree').split(/\{terms\}|\{
     color: var(--gold-300);
     font: 600 1.6rem var(--font-body);
   }
-  .files :global(.pdf.expanded) {
-    display: block;
-    height: 560px;
+  .files :global(.note) {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
   }
-  .files :global(.pdf iframe) {
+  .files :global(.zoomable) {
+    cursor: zoom-in;
+  }
+  .files :global(.zoomable:focus-visible) {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  /* Full-screen view of a view-only file */
+  :global(html.viewing) {
+    overflow: hidden;
+  }
+  .shell :global(.viewer) {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    background: #0b0b0b;
+    color: #fff;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .shell :global(.viewer[hidden]) {
+    display: none;
+  }
+  .shell :global(.v-bar) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    background: #161616;
+    border-bottom: 1px solid #2e2e2e;
+  }
+  .shell :global(.v-name) {
+    margin: 0;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .shell :global(.v-tools) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+  }
+  .shell :global(.v-btn) {
+    min-width: 44px;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid #3a3a3a;
+    background: #242424;
+    color: #fff;
+    font: 700 1.1rem var(--font-body);
+    cursor: pointer;
+  }
+  .shell :global(.v-btn:hover) {
+    border-color: var(--amber);
+  }
+  .shell :global(.v-close) {
+    font-size: 0.9rem;
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #121212;
+  }
+  .shell :global(.viewer:not(.can-zoom) [data-zoom]),
+  .shell :global(.viewer:not(.can-zoom) .v-level) {
+    display: none;
+  }
+  .shell :global(.v-level) {
+    min-width: 3.2em;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #bbb;
+  }
+  .shell :global(.v-stage) {
+    position: relative;
+    display: grid;
+    place-items: center;
+    overflow: auto;
+    overscroll-behavior: contain;
+    min-height: 0;
+  }
+  .shell :global(.v-stage.zoomed) {
+    place-items: start;
+    cursor: grab;
+  }
+  .shell :global(.v-stage.zoomed:active) {
+    cursor: grabbing;
+  }
+  .shell :global(.v-stage canvas) {
+    display: block;
+    height: auto;
+    margin: auto;
+    pointer-events: none;
+  }
+  .shell :global(.v-media) {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+  }
+  .shell :global(.v-media video) {
+    max-width: 100%;
+    max-height: 100%;
+  }
+  .shell :global(.v-pdf iframe) {
     width: 100%;
     height: 100%;
     border: 0;
     background: #fff;
   }
-  .files :global(.note) {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin: 0;
+  .shell :global(.viewer .wm) {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: var(--wm), var(--wm-dark);
+    background-position:
+      0 0,
+      160px 90px;
+  }
+  .shielded :global(.v-stage) {
+    filter: blur(28px) saturate(0.4);
   }
   .shielded .files :global(.preview) {
     filter: blur(28px) saturate(0.4);
