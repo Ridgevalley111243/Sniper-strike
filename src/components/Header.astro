@@ -134,17 +134,17 @@ const current = (href: string) => path.startsWith('/' + href);
     transition: background-color 0.2s;
   }
   ul a:not(.btn):hover {
-    background: rgb(74 127 167 / 0.12);
+    background: rgb(255 221 0 / 0.12);
   }
   ul a[aria-current='page'] {
     color: var(--accent);
   }
   .over-dark ul a[aria-current='page'] {
-    color: var(--blue-200);
+    color: var(--gold-300);
   }
   .over-dark .cta {
-    background: var(--blue-200);
-    color: var(--navy-950);
+    background: var(--gold-300);
+    color: var(--purple-900);
   }
   .cta {
     margin-left: 8px;
@@ -169,7 +169,7 @@ const current = (href: string) => path.startsWith('/' + href);
     transition: background-color 0.2s;
   }
   .theme:hover {
-    background: rgb(74 127 167 / 0.16);
+    background: rgb(255 221 0 / 0.16);
   }
   .theme .to-light,
   :global([data-theme='dark']) .theme .to-dark {

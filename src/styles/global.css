@@ -1,29 +1,33 @@
-/* Trutech Business: design tokens from the brand palette. */
+/* Trutech Business colours: Golden Yellow #FFDD00 and Dark Purple #3D0B37.
+   Pages are white so text stays easy to read. Purple carries the text,
+   headings and dark bands; yellow is for actions and highlights: buttons,
+   accents on purple, and small marks on white. Yellow is never used for
+   text on white (too little contrast). */
 :root {
-  --navy-950: #0a1931; /* 0A1931 */
-  --navy-800: #1a3d63; /* 1A3D63 */
-  --blue-500: #4a7fa7; /* 4A7FA7 */
-  --blue-200: #b3cfe5; /* B3CFE5 */
-  --mist-50: #f6fafd; /* F6FAFD */
+  --purple-900: #3d0b37; /* Dark Purple: 14:1 on white */
+  --purple-700: #5c1a54;
+  --gold-500: #f2c900; /* golden yellow, a touch deeper for lines on white */
+  --gold-300: #ffdd00; /* Golden Yellow: 11:1 on Dark Purple */
+  --cream-50: #fffdf2;
   --white: #ffffff;
 
-  /* Clear, white page; the brand blues are for accents, buttons and bands. */
   --bg: var(--white);
   --surface: var(--white);
-  --text: var(--navy-950);
-  --text-muted: #46586d; /* 7:1 on white */
-  --border: #e1e8f0;
-  --accent: #2f6a95; /* brand blue, darkened for text: 5.6:1 on white */
-  --accent-strong: var(--navy-800);
-  --ring: #2f6a95;
-  --surface-2: #f4f7fb; /* soft bands, panels and notices */
+  --text: var(--purple-900);
+  --text-muted: #5b4a58; /* 8:1 on white */
+  --border: #eee6ec;
+  --accent: #7a1b6d; /* purple for links and labels: 9:1 on white */
+  --accent-strong: var(--purple-700);
+  --ring: #7a1b6d;
+  --surface-2: #fffbe5; /* soft bands, panels and notices */
   --header-bg: rgb(255 255 255 / 0.9);
   --menu-bg: var(--white);
-  --field-bg: #f7f9fc;
-  --inverse-bg: var(--navy-950); /* primary buttons, active filters */
-  --inverse-bg-hover: var(--navy-800);
-  --inverse-text: var(--white);
-  --skel: #e8eef5;
+  --field-bg: #fdfbf7;
+  --inverse-bg: var(--gold-300); /* primary buttons, active filters: purple on yellow */
+  --inverse-bg-hover: var(--purple-900);
+  --inverse-text: var(--purple-900);
+  --inverse-text-hover: var(--gold-300);
+  --skel: #f3ecef;
   --skel-hi: rgb(255 255 255 / 0.7);
 
   --font-display: 'Al Ragas', 'Gloock', Georgia, 'Times New Roman', serif;
@@ -32,8 +36,8 @@
   --radius-sm: 10px;
   --radius: 18px;
   --radius-lg: 28px;
-  --shadow: 0 1px 2px rgb(10 25 49 / 0.06), 0 12px 32px -12px rgb(10 25 49 / 0.18);
-  --shadow-lg: 0 24px 64px -24px rgb(10 25 49 / 0.35);
+  --shadow: 0 1px 2px rgb(61 11 55 / 0.06), 0 12px 32px -12px rgb(61 11 55 / 0.18);
+  --shadow-lg: 0 24px 64px -24px rgb(61 11 55 / 0.35);
   --max: 1180px;
   --gutter: clamp(16px, 4vw, 40px);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -43,22 +47,23 @@
 /* Dark theme. The theme script in Base.astro sets data-theme from the
    visitor's choice, or from their system setting until they choose. */
 :root[data-theme='dark'] {
-  --bg: #081427;
-  --surface: #0f2340;
-  --surface-2: #0c1d37;
-  --text: var(--mist-50);
-  --text-muted: #a9c0d6; /* 8.9:1 on --bg */
-  --border: rgb(179 207 229 / 0.16);
-  --accent: var(--blue-200);
-  --accent-strong: var(--blue-200);
-  --ring: var(--blue-200);
-  --header-bg: rgb(8 20 39 / 0.86);
-  --menu-bg: #0f2340;
-  --field-bg: #0a1a33;
-  --inverse-bg: var(--blue-200);
+  --bg: #1c0519;
+  --surface: #2c0a28;
+  --surface-2: #24081f;
+  --text: var(--cream-50);
+  --text-muted: #e3cfe0; /* 12:1 on --bg */
+  --border: rgb(255 221 0 / 0.16);
+  --accent: var(--gold-300);
+  --accent-strong: var(--gold-300);
+  --ring: var(--gold-300);
+  --header-bg: rgb(28 5 25 / 0.86);
+  --menu-bg: #2c0a28;
+  --field-bg: #1f061c;
+  --inverse-bg: var(--gold-300);
   --inverse-bg-hover: var(--white);
-  --inverse-text: var(--navy-950);
-  --skel: #132a4c;
+  --inverse-text: var(--purple-900);
+  --inverse-text-hover: var(--purple-900);
+  --skel: #3a1234;
   --skel-hi: rgb(255 255 255 / 0.07);
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -12px rgb(0 0 0 / 0.6);
   --shadow-lg: 0 24px 64px -24px rgb(0 0 0 / 0.7);
@@ -173,7 +178,7 @@ a {
   top: -60px;
   z-index: 100;
   padding: 10px 16px;
-  background: var(--navy-950);
+  background: var(--purple-900);
   color: var(--white);
   border-radius: var(--radius-sm);
   transition: top 0.2s var(--ease);
@@ -239,8 +244,8 @@ p {
 .eyebrow::before {
   content: '';
   width: 28px;
-  height: 2px;
-  background: currentColor;
+  height: 3px;
+  background: var(--gold-500);
   border-radius: 2px;
 }
 .muted {
@@ -283,13 +288,15 @@ p {
 }
 .btn-primary:hover {
   background: var(--inverse-bg-hover);
+  color: var(--inverse-text-hover, var(--inverse-text));
 }
 .btn-light {
-  background: var(--blue-200);
-  color: var(--navy-950);
+  background: var(--gold-300);
+  color: var(--purple-900);
 }
 .btn-light:hover {
   background: var(--white);
+  color: var(--purple-900);
 }
 .btn-ghost {
   border-color: currentColor;
@@ -297,7 +304,7 @@ p {
   background: transparent;
 }
 .btn-ghost:hover {
-  background: rgb(179 207 229 / 0.16);
+  background: rgb(255 221 0 / 0.16);
 }
 
 /* ---- Sections ---- */
@@ -319,23 +326,24 @@ p {
   margin-bottom: 0;
 }
 .dark {
-  background: var(--navy-950);
-  color: var(--mist-50);
-  --text-muted: #a9c0d6; /* 9:1 on navy */
-  --border: rgb(179 207 229 / 0.16);
-  --accent: var(--blue-200);
-  --ring: var(--blue-200);
-  --inverse-bg: var(--blue-200);
+  background: var(--purple-900);
+  color: var(--cream-50);
+  --text-muted: #e3cfe0; /* 11:1 on Dark Purple */
+  --border: rgb(255 221 0 / 0.16);
+  --accent: var(--gold-300);
+  --ring: var(--gold-300);
+  --inverse-bg: var(--gold-300);
   --inverse-bg-hover: var(--white);
-  --inverse-text: var(--navy-950);
+  --inverse-text: var(--purple-900);
+  --inverse-text-hover: var(--purple-900);
 }
 /* A soft band to separate sections on the white page. */
 .tint {
   background: var(--surface-2);
 }
-/* Navy bands would vanish into the dark page, so set them a shade deeper. */
+/* Purple bands would vanish into the dark page, so set them a shade deeper. */
 :root[data-theme='dark'] .dark {
-  background: #050e1e;
+  background: #120310;
 }
 
 /* ---- Cards ---- */
@@ -346,7 +354,7 @@ p {
   padding: clamp(22px, 3vw, 32px);
 }
 .dark .card {
-  background: rgb(26 61 99 / 0.35);
+  background: rgb(92 26 84 / 0.35);
 }
 
 .tag {
@@ -356,12 +364,13 @@ p {
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 600;
-  background: rgb(74 127 167 / 0.12);
-  color: var(--accent-strong);
+  background: rgb(255 221 0 / 0.22);
+  color: var(--purple-900);
 }
+:root[data-theme='dark'] .tag,
 .dark .tag {
-  background: rgb(179 207 229 / 0.14);
-  color: var(--blue-200);
+  background: rgb(255 221 0 / 0.14);
+  color: var(--gold-300);
 }
 .tags {
   display: flex;

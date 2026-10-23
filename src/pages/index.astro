@@ -218,7 +218,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     min-height: 100svh;
     display: flex;
     align-items: center;
-    color: var(--mist-50);
+    color: var(--cream-50);
     padding-block: 120px 96px;
     overflow: hidden;
   }
@@ -235,13 +235,13 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
   /* Keeps the headline readable over every part of the video. */
   .shade {
     background:
-      linear-gradient(90deg, rgb(10 25 49 / 0.85) 0%, rgb(10 25 49 / 0.45) 50%, rgb(10 25 49 / 0.05) 100%),
-      linear-gradient(0deg, rgb(10 25 49 / 0.8) 0%, rgb(10 25 49 / 0) 35%);
+      linear-gradient(90deg, rgb(61 11 55 / 0.85) 0%, rgb(61 11 55 / 0.45) 50%, rgb(61 11 55 / 0.05) 100%),
+      linear-gradient(0deg, rgb(61 11 55 / 0.8) 0%, rgb(61 11 55 / 0) 35%);
   }
   /* On phones the text covers the whole video, so shade it evenly. */
   @media (max-width: 768px) {
     .shade {
-      background: linear-gradient(180deg, rgb(10 25 49 / 0.55) 0%, rgb(10 25 49 / 0.75) 60%, rgb(10 25 49 / 0.9) 100%);
+      background: linear-gradient(180deg, rgb(61 11 55 / 0.55) 0%, rgb(61 11 55 / 0.75) 60%, rgb(61 11 55 / 0.9) 100%);
     }
   }
   .reel-toggle {
@@ -254,17 +254,17 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    border: 1px solid rgb(179 207 229 / 0.4);
-    background: rgb(10 25 49 / 0.5);
+    border: 1px solid rgb(255 221 0 / 0.4);
+    background: rgb(61 11 55 / 0.5);
     backdrop-filter: blur(10px);
-    color: var(--mist-50);
+    color: var(--cream-50);
     cursor: pointer;
   }
   .reel-toggle:hover {
-    background: rgb(26 61 99 / 0.7);
+    background: rgb(92 26 84 / 0.7);
   }
   .reel-toggle:focus-visible {
-    outline: 2px solid var(--blue-200);
+    outline: 2px solid var(--gold-300);
     outline-offset: 3px;
   }
   .i-pause,
@@ -307,27 +307,27 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     padding: 8px 16px;
     margin-bottom: 28px;
     border-radius: 999px;
-    border: 1px solid rgb(179 207 229 / 0.28);
-    background: rgb(179 207 229 / 0.1);
+    border: 1px solid rgb(255 221 0 / 0.28);
+    background: rgb(255 221 0 / 0.1);
     backdrop-filter: blur(10px);
     font-size: 0.85rem;
     font-weight: 500;
-    color: var(--blue-200);
+    color: var(--gold-300);
   }
   .dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--blue-200);
-    box-shadow: 0 0 0 0 rgb(179 207 229 / 0.6);
+    background: var(--gold-300);
+    box-shadow: 0 0 0 0 rgb(255 221 0 / 0.6);
     animation: pulse 2.4s infinite;
   }
   @keyframes pulse {
     70% {
-      box-shadow: 0 0 0 10px rgb(179 207 229 / 0);
+      box-shadow: 0 0 0 10px rgb(255 221 0 / 0);
     }
     100% {
-      box-shadow: 0 0 0 0 rgb(179 207 229 / 0);
+      box-shadow: 0 0 0 0 rgb(255 221 0 / 0);
     }
   }
   h1 {
@@ -337,12 +337,12 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
   }
   h1 em {
     font-style: normal;
-    color: var(--blue-200);
+    color: var(--gold-300);
   }
   .sub {
     max-width: 58ch;
     font-size: clamp(1.02rem, 1.5vw, 1.2rem);
-    color: #c4d6e6;
+    color: #ead9e6;
     margin-bottom: 36px;
   }
   .actions {
@@ -351,14 +351,14 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     gap: 14px;
   }
   .hero .btn-ghost {
-    color: var(--mist-50);
-    border-color: rgb(179 207 229 / 0.5);
+    color: var(--cream-50);
+    border-color: rgb(255 221 0 / 0.5);
   }
   .now {
     padding: 22px;
     border-radius: var(--radius);
-    border: 1px solid rgb(179 207 229 / 0.22);
-    background: rgb(10 25 49 / 0.45);
+    border: 1px solid rgb(255 221 0 / 0.22);
+    background: rgb(61 11 55 / 0.45);
     backdrop-filter: blur(14px);
   }
   .now-label {
@@ -366,7 +366,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     font-weight: 600;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--blue-200);
+    color: var(--gold-300);
     margin-bottom: 10px;
   }
   .now ul {
@@ -385,14 +385,14 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     transition: background-color 0.2s;
   }
   .now a:hover {
-    background: rgb(179 207 229 / 0.1);
+    background: rgb(255 221 0 / 0.1);
   }
   .now-title {
     font-weight: 600;
   }
   .now-meta {
     font-size: 0.82rem;
-    color: #a9c0d6;
+    color: #e3cfe0;
   }
   .scroll {
     position: absolute;
@@ -402,7 +402,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     width: 28px;
     height: 44px;
     margin-left: -14px;
-    border: 1.5px solid rgb(179 207 229 / 0.5);
+    border: 1.5px solid rgb(255 221 0 / 0.5);
     border-radius: 999px;
   }
   /* A 46px-wide tap area around the slim scroll cue. */
@@ -419,7 +419,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     height: 8px;
     margin-left: -2px;
     border-radius: 2px;
-    background: var(--blue-200);
+    background: var(--gold-300);
     animation: wheel 1.8s infinite;
   }
   @keyframes wheel {
@@ -489,7 +489,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
   .service:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow);
-    border-color: var(--blue-200);
+    border-color: var(--gold-300);
   }
   .icon {
     display: inline-grid;
@@ -498,8 +498,8 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     height: 52px;
     margin-bottom: 20px;
     border-radius: 14px;
-    background: linear-gradient(135deg, var(--navy-950), var(--navy-800));
-    color: var(--blue-200);
+    background: linear-gradient(135deg, var(--purple-900), var(--purple-700));
+    color: var(--gold-300);
   }
   .service p {
     margin: 0;
@@ -578,7 +578,7 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     left: 0;
     width: 48px;
     height: 2px;
-    background: var(--blue-500);
+    background: var(--gold-500);
   }
   .num {
     display: block;
@@ -601,14 +601,15 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     text-align: center;
     padding: clamp(48px, 8vw, 96px) clamp(20px, 6vw, 80px);
     border-radius: var(--radius-lg);
-    color: var(--mist-50);
+    border-top: 4px solid var(--gold-300);
+    color: var(--cream-50);
     background:
-      radial-gradient(80% 120% at 0% 0%, rgb(74 127 167 / 0.55), transparent 60%),
-      radial-gradient(70% 110% at 100% 100%, rgb(179 207 229 / 0.25), transparent 60%),
-      var(--navy-950);
+      radial-gradient(80% 120% at 100% 100%, rgb(155 42 138 / 0.45), transparent 60%),
+      radial-gradient(70% 110% at 0% 0%, rgb(122 27 109 / 0.6), transparent 60%),
+      var(--purple-900);
   }
   .cta .lead {
-    color: #c4d6e6;
+    color: #ead9e6;
     margin-inline: auto;
     margin-bottom: 32px;
   }

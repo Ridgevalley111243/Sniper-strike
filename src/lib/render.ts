@@ -20,11 +20,13 @@ const svg = (paths: string, size = 18) =>
 const ARROW = '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>';
 const ARROW_UP_RIGHT = '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>';
 
+// Shades of Dark Purple (yellow blended into purple turns muddy), so the
+// white label stays readable and yellow is kept for the status and accents.
 const PALETTES = [
-  ['#0a1931', '#1a3d63', '#4a7fa7'],
-  ['#1a3d63', '#4a7fa7', '#b3cfe5'],
-  ['#0a1931', '#4a7fa7', '#b3cfe5'],
-  ['#132a4a', '#1a3d63', '#7ea6c7'],
+  ['#3d0b37', '#5c1a54', '#9b2a8a'],
+  ['#5c1a54', '#3d0b37', '#7a1b6d'],
+  ['#2a0726', '#7a1b6d', '#9b2a8a'],
+  ['#3d0b37', '#7a1b6d', '#5c1a54'],
 ];
 
 /** The project's cover image, or a branded cover generated from the palette. */

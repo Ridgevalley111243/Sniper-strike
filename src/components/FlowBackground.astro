@@ -1,5 +1,5 @@
 ---
-// Slow, flowing navy-to-mist shapes inspired by the brand palette artwork.
+// Slow, flowing purple shapes with golden-yellow light, from the brand palette.
 // CSS only (no JS), paused entirely for visitors who prefer reduced motion.
 // tone="light" is the soft version used behind page titles.
 interface Props {
@@ -30,7 +30,7 @@ const { tone = 'dark' } = Astro.props;
     inset: 0;
     overflow: hidden;
     pointer-events: none; /* decoration only; taps reach the page (and the hidden admin gesture) */
-    background: radial-gradient(120% 90% at 80% 0%, #1a3d63 0%, #0a1931 55%, #07122a 100%);
+    background: radial-gradient(120% 90% at 80% 0%, #5c1a54 0%, #3d0b37 55%, #200519 100%);
   }
   .blob {
     position: absolute;
@@ -44,7 +44,7 @@ const { tone = 'dark' } = Astro.props;
     height: 46vmax;
     left: -12vmax;
     top: -14vmax;
-    background: #1a3d63;
+    background: #5c1a54;
     animation: drift1 26s ease-in-out infinite alternate;
   }
   .b2 {
@@ -52,8 +52,8 @@ const { tone = 'dark' } = Astro.props;
     height: 38vmax;
     right: -10vmax;
     top: 10%;
-    background: #4a7fa7;
-    opacity: 0.45;
+    background: #ffdd00;
+    opacity: 0.2;
     animation: drift2 30s ease-in-out infinite alternate;
   }
   .b3 {
@@ -61,8 +61,8 @@ const { tone = 'dark' } = Astro.props;
     height: 30vmax;
     left: 30%;
     bottom: -16vmax;
-    background: #b3cfe5;
-    opacity: 0.22;
+    background: #ffdd00;
+    opacity: 0.12;
     animation: drift3 34s ease-in-out infinite alternate;
   }
   .b4 {
@@ -70,8 +70,8 @@ const { tone = 'dark' } = Astro.props;
     height: 22vmax;
     right: 22%;
     bottom: 8%;
-    background: #4a7fa7;
-    opacity: 0.3;
+    background: #7a1b6d;
+    opacity: 0.5;
     animation: drift1 22s ease-in-out infinite alternate-reverse;
   }
   .lines {
@@ -83,7 +83,7 @@ const { tone = 'dark' } = Astro.props;
   }
   .lines path {
     fill: none;
-    stroke: #b3cfe5;
+    stroke: #ffdd00;
     stroke-width: 1;
     stroke-dasharray: 6 14;
     animation: flow 18s linear infinite;
@@ -92,7 +92,7 @@ const { tone = 'dark' } = Astro.props;
   .grain {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, transparent 60%, rgb(10 25 49 / 0.85));
+    background: linear-gradient(180deg, transparent 60%, rgb(61 11 55 / 0.85));
   }
   @keyframes drift1 {
     to {
@@ -114,44 +114,44 @@ const { tone = 'dark' } = Astro.props;
       stroke-dashoffset: -400;
     }
   }
-  /* Light tone: white with a hint of the brand blues. */
+  /* Light tone: white with a warm hint of yellow and purple. */
   .light {
-    background: linear-gradient(180deg, #f4f8fc 0%, #ffffff 100%);
+    background: linear-gradient(180deg, #fffdf2 0%, #ffffff 100%);
   }
   .light .blob {
     filter: blur(80px);
   }
   .light .b1 {
-    background: #b3cfe5;
-    opacity: 0.55;
+    background: #ffdd00;
+    opacity: 0.35;
   }
   .light .b2 {
-    background: #b3cfe5;
-    opacity: 0.4;
+    background: #7a1b6d;
+    opacity: 0.1;
   }
   .light .b3,
   .light .b4 {
-    background: #4a7fa7;
-    opacity: 0.12;
+    background: #ffdd00;
+    opacity: 0.15;
   }
   .light .lines {
-    opacity: 0.22;
+    opacity: 0.18;
   }
   .light .lines path {
-    stroke: #4a7fa7;
+    stroke: #3d0b37;
   }
   .light .grain {
     background: linear-gradient(180deg, transparent 55%, #ffffff);
   }
   :global([data-theme='dark']) .light {
-    background: linear-gradient(180deg, #0c1d37 0%, #081427 100%);
+    background: linear-gradient(180deg, #24081f 0%, #1c0519 100%);
   }
   :global([data-theme='dark']) .light .b1,
   :global([data-theme='dark']) .light .b2 {
-    background: #1a3d63;
+    background: #5c1a54;
   }
   :global([data-theme='dark']) .light .grain {
-    background: linear-gradient(180deg, transparent 55%, #081427);
+    background: linear-gradient(180deg, transparent 55%, #1c0519);
   }
   @media (prefers-reduced-motion: reduce) {
     .blob,
