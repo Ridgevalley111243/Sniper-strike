@@ -784,8 +784,13 @@ async function settingsForm() {
   main().innerHTML = `
     <div class="head"><div><h1>Settings</h1><p class="hint">Shown on the Contact page, the footer and the About page. Changes appear on the site within about 15 minutes.</p></div></div>
     <section class="card panel"><h2>Profile photo</h2>
-      <p class="hint">Shown on the home page and the About page. It changes on the site as soon as you upload it. For the look in the design, use a photo of you with the background removed (a PNG with a transparent background, for example from the Background Remover in Canva).</p>
-      <div class="profile" data-photo></div>
+      <p class="hint">Shown at the top of the home page. It changes on the site as soon as you upload it. For the look in the design, use a photo of you with the background removed (a PNG with a transparent background, for example from the Background Remover in Canva).</p>
+      <div class="profile" data-photo="photo"></div>
+      <div class="progress" data-progress hidden><span data-progress-text></span><progress max="1" value="0"></progress></div>
+    </section>
+    <section class="card panel"><h2>About photo</h2>
+      <p class="hint">Shown in the About section of the home page and on the About page. Without one, those places show your profile photo.</p>
+      <div class="profile" data-photo="aboutPhoto"></div>
       <div class="progress" data-progress hidden><span data-progress-text></span><progress max="1" value="0"></progress></div>
     </section>
     <form data-settings novalidate>
@@ -808,57 +813,62 @@ async function settingsForm() {
       <p class="error" role="alert" data-error hidden></p>
       <div class="actions sticky-actions"><button class="btn btn-primary" type="submit">Save settings</button></div>
     </form>`;
-  // The photo is saved on its own, straight after upload, so it never waits
+  // Each photo is saved on its own, straight after upload, so it never waits
   // for the rest of the form.
-  const drawPhoto = () => {
-    $('[data-photo]').innerHTML = `${s.photo ? `<img src="${attr(s.photo)}" alt="Your profile photo" />` : '<span class="avatar-empty" aria-hidden="true">No photo</span>'}
-      <div class="actions"><label class="upload">${s.photo ? 'Change photo' : '+ Upload photo'}<input type="file" accept="image/*" data-photo-input /></label>
-      ${s.photo ? '<button class="btn btn-ghost btn-sm" type="button" data-photo-remove>Remove</button>' : ''}</div>`;
-  };
-  const savePhoto = async (photo: string) => {
-    const { data: latest, error: readError } = await sb.from('site_settings').select('data').eq('id', 1).single();
-    if (readError) throw readError;
-    const { error: saveError } = await sb.from('site_settings').update({ data: { ...latest.data, photo } }).eq('id', 1);
-    if (saveError) throw saveError;
-    const old = mediaPath(s.photo);
-    s.photo = photo;
-    if (old) await sb.storage.from(MEDIA).remove([old]);
+  const photoNames: Record<string, string> = { photo: 'Profile photo', aboutPhoto: 'About photo' };
+  for (const key of Object.keys(photoNames)) {
+    const name = photoNames[key];
+    const box = $(`[data-photo="${key}"]`);
+    const progress = box.nextElementSibling as HTMLElement;
+    const drawPhoto = () => {
+      box.innerHTML = `${s[key] ? `<img src="${attr(s[key])}" alt="Your ${name.toLowerCase()}" />` : '<span class="avatar-empty" aria-hidden="true">No photo</span>'}
+        <div class="actions"><label class="upload">${s[key] ? 'Change photo' : '+ Upload photo'}<input type="file" accept="image/*" data-photo-input /></label>
+        ${s[key] ? '<button class="btn btn-ghost btn-sm" type="button" data-photo-remove>Remove</button>' : ''}</div>`;
+    };
+    const savePhoto = async (photo: string) => {
+      const { data: latest, error: readError } = await sb.from('site_settings').select('data').eq('id', 1).single();
+      if (readError) throw readError;
+      const { error: saveError } = await sb.from('site_settings').update({ data: { ...latest.data, [key]: photo } }).eq('id', 1);
+      if (saveError) throw saveError;
+      const old = mediaPath(s[key]);
+      s[key] = photo;
+      // Keep a file the other photo still uses.
+      if (old && !Object.keys(photoNames).some((k) => mediaPath(s[k]) === old)) await sb.storage.from(MEDIA).remove([old]);
+      drawPhoto();
+    };
     drawPhoto();
-  };
-  drawPhoto();
-  $('[data-photo]').addEventListener('change', async (e) => {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file) return;
-    const box = $('[data-progress]');
-    const label = `Uploading ${file.name}`;
-    box.hidden = false;
-    $('[data-progress-text]').textContent = label;
-    try {
-      const url = await uploadImage(file, (f) => ($<HTMLProgressElement>('progress', box).value = f), 'profile');
+    box.addEventListener('change', async (e) => {
+      const input = e.target as HTMLInputElement;
+      const file = input.files?.[0];
+      input.value = '';
+      if (!file) return;
+      progress.hidden = false;
+      $('[data-progress-text]', progress).textContent = `Uploading ${file.name}`;
       try {
-        await savePhoto(url);
+        const url = await uploadImage(file, (f) => ($<HTMLProgressElement>('progress', progress).value = f), 'profile');
+        try {
+          await savePhoto(url);
+        } catch (err) {
+          await sb.storage.from(MEDIA).remove([mediaPath(url)!]);
+          throw err;
+        }
+        toast(`${name} updated.`);
       } catch (err) {
-        await sb.storage.from(MEDIA).remove([mediaPath(url)!]);
-        throw err;
+        toast(friendly(err), true);
+      } finally {
+        progress.hidden = true;
       }
-      toast('Profile photo updated.');
-    } catch (err) {
-      toast(friendly(err), true);
-    } finally {
-      box.hidden = true;
-    }
-  });
-  $('[data-photo]').addEventListener('click', async (e) => {
-    if (!(e.target as HTMLElement).matches('[data-photo-remove]') || !confirm('Remove your profile photo from the website?')) return;
-    try {
-      await savePhoto('');
-      toast('Profile photo removed.');
-    } catch (err) {
-      toast(friendly(err), true);
-    }
-  });
+    });
+    box.addEventListener('click', async (e) => {
+      if (!(e.target as HTMLElement).matches('[data-photo-remove]') || !confirm(`Remove your ${name.toLowerCase()} from the website?`)) return;
+      try {
+        await savePhoto('');
+        toast(`${name} removed.`);
+      } catch (err) {
+        toast(friendly(err), true);
+      }
+    });
+  }
 
   const draw = () => {
     $('[data-socials]').innerHTML = socials.length

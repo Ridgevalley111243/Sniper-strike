@@ -1,6 +1,7 @@
 // Shows the current profile photo (Settings in the admin) without waiting for
 // the next rebuild. Slots are elements with data-photo-slot; data-photo holds
 // the photo the page was built with, data-fallback the image shown without one.
+// Slots marked data-photo-slot="about" show the About photo when there is one.
 //
 // The photo stays hidden (global.css) until this has checked which photo is
 // current, so a photo replaced since the last build never flashes on screen.
@@ -28,8 +29,9 @@ export async function liveProfilePhoto() {
   // If the check takes too long (slow connection), show what the page has.
   const fallback = setTimeout(() => slots.forEach(reveal), 4000);
   try {
-    const { photo, owner } = await fetchSettings();
-    await Promise.all(slots.map((slot) => show(slot, photo, owner)));
+    const { photo, aboutPhoto, owner } = await fetchSettings();
+    const photoFor = (slot: HTMLElement) => (slot.dataset.photoSlot === 'about' && aboutPhoto) || photo;
+    await Promise.all(slots.map((slot) => show(slot, photoFor(slot), owner)));
   } finally {
     clearTimeout(fallback);
     slots.forEach(reveal);

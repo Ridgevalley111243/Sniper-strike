@@ -40,6 +40,8 @@ export type Settings = {
   whatsappName: string;
   /** Profile photo URL (uploaded in the admin), or '' for none. */
   photo: string;
+  /** Photo for the About section and page, or '' to use the profile photo. */
+  aboutPhoto: string;
   socials: Social[];
   /** Site text edited in the admin: { key: text } (see src/lib/texts.ts). */
   texts: Record<string, string>;
@@ -82,6 +84,7 @@ export function normalizeSettings(data: Record<string, unknown> | null | undefin
     whatsapp: str(d.whatsapp).replace(/\D/g, ''),
     whatsappName: str(d.whatsappName),
     photo: /^https?:\/\//.test(str(d.photo)) ? str(d.photo) : '',
+    aboutPhoto: /^https?:\/\//.test(str(d.aboutPhoto)) ? str(d.aboutPhoto) : '',
     socials: socials
       .map((s: Record<string, unknown>) => ({ label: str(s?.label), handle: str(s?.handle), url: str(s?.url), icon: str(s?.icon) }))
       .filter((s: Social) => s.url),
