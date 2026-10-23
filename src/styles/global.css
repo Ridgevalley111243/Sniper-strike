@@ -115,6 +115,15 @@
   }
 }
 
+/* Profile photos fade in once src/scripts/profile.ts has checked that they
+   are the current photo (without JavaScript they show straight away). */
+[data-photo-slot] img {
+  transition: opacity 0.35s var(--ease);
+}
+.js [data-photo-slot]:not(.photo-ready) img {
+  opacity: 0;
+}
+
 /* Visible to screen readers only. */
 .sr-only {
   position: absolute;
