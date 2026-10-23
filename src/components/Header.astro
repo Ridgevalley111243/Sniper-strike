@@ -1,15 +1,16 @@
 ---
 import Icon from './Icon.astro';
 import Logo from './Logo.astro';
+import Text from './Text.astro';
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const path = Astro.url.pathname.replace(base, '/');
 const links = [
-  { href: '', label: 'Home' },
-  { href: 'services/', label: 'Services' },
-  { href: 'work/', label: 'Work' },
-  { href: 'about/', label: 'About' },
-  { href: 'contact/', label: 'Contact' },
+  { href: '', key: 'nav.home' },
+  { href: 'services/', key: 'nav.services' },
+  { href: 'work/', key: 'nav.work' },
+  { href: 'about/', key: 'nav.about' },
+  { href: 'contact/', key: 'nav.contact' },
 ];
 const current = (href: string) => (href ? path.startsWith('/' + href) : path === '/');
 ---
@@ -25,7 +26,7 @@ const current = (href: string) => (href ? path.startsWith('/' + href) : path ===
             links.map((l) => (
               <li>
                 <a href={base + l.href} aria-current={current(l.href) ? 'page' : undefined}>
-                  {l.label}
+                  <Text k={l.key} />
                 </a>
               </li>
             ))
@@ -38,7 +39,7 @@ const current = (href: string) => (href ? path.startsWith('/' + href) : path ===
           <span class="to-dark"><Icon name="moon" size={18} /></span>
           <span class="sr-only">Light mode</span>
         </button>
-        <a class="btn btn-light talk" href={base + 'contact/'}>Let’s Talk</a>
+        <a class="btn btn-light talk" href={base + 'contact/'}><Text k="nav.cta" /></a>
         <button class="icon-btn menu" type="button" aria-expanded="false" aria-controls="nav-links" data-menu>
           <span class="open"><Icon name="menu" size={20} label="Open menu" /></span>
           <span class="shut"><Icon name="close" size={20} label="Close menu" /></span>

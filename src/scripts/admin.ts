@@ -4,6 +4,7 @@
 import { createClient, type Session } from '@supabase/supabase-js';
 import { STATUSES, SUPABASE_ANON_KEY, SUPABASE_URL } from '../lib/content';
 import { esc } from '../lib/render';
+import { DEFAULTS, GROUPS, type Field } from '../lib/texts';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: 'trutech-admin' },
@@ -217,13 +218,14 @@ async function route() {
   document.querySelectorAll<HTMLElement>('[data-nav]').forEach((a) =>
     a.dataset.nav === section ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'),
   );
-  main().innerHTML = skeleton(Boolean(id) || section === 'settings' || section === 'account');
+  main().innerHTML = skeleton(Boolean(id) || section === 'settings' || section === 'texts' || section === 'account');
   main().setAttribute('aria-busy', 'true');
   window.scrollTo(0, 0);
   try {
     if (section === 'projects') await (id ? projectForm(id) : projectList());
     else if (section === 'clients') await (id ? clientDetail(id) : clientList());
     else if (section === 'settings') await settingsForm();
+    else if (section === 'texts') await textsForm();
     else if (section === 'account') accountView();
     else location.hash = '#/projects';
   } catch (e) {
@@ -909,6 +911,111 @@ async function settingsForm() {
   });
 }
 
+/* ---------- site text ---------- */
+
+// Every piece of text on the website (defaults in src/lib/texts.ts). Only
+// wording that differs from the default is saved, in site_settings.data.texts.
+async function textsForm() {
+  const { data, error } = await sb.from('site_settings').select('data').eq('id', 1).maybeSingle();
+  if (error) throw error;
+  const saved: Record<string, string> = data?.data?.texts ?? {};
+  const valueOf = (f: Field) => (typeof saved[f.key] === 'string' && saved[f.key].trim() ? saved[f.key] : f.value);
+  const HELP: Record<string, string> = {
+    hl: 'Words between *stars* are shown in yellow.',
+    list: 'One per line.',
+    paras: 'Leave an empty line between paragraphs.',
+    md: 'Use ## for a heading, - for a list item, **bold** and [link text](https://…).',
+  };
+  const input = (f: Field) => {
+    const id = `tx-${f.key.replace(/\W+/g, '-')}`;
+    const v = valueOf(f);
+    const box =
+      f.kind === 'line' || f.kind === 'hl'
+        ? `<textarea id="${id}" class="grow" rows="1" data-key="${attr(f.key)}">${attr(v)}</textarea>`
+        : `<textarea id="${id}" class="autosize${f.kind === 'md' ? ' long' : ''}" rows="${f.kind === 'md' ? 14 : 3}" data-key="${attr(f.key)}">${attr(v)}</textarea>`;
+    const hint = f.hint ?? HELP[f.kind] ?? '';
+    return `<div class="field tx-field" data-field="${attr(f.key)}">
+      <div class="tx-label"><label for="${id}">${esc(f.label)}</label>
+        <button class="btn btn-ghost btn-sm" type="button" data-reset="${attr(f.key)}"${v === f.value ? ' hidden' : ''}>Use original</button></div>
+      ${box}${hint ? `<p class="hint">${esc(hint)}</p>` : ''}</div>`;
+  };
+  main().innerHTML = `
+    <div class="head"><div><h1>Site text</h1>
+      <p class="hint">Every piece of text on the website, page by page. Change what you like and press Save: most text changes on the site straight away, and everything is updated within about 15 minutes. Press “Use original” to go back to the first wording.</p></div></div>
+    <div class="field tx-search"><label for="tx-search">Find text</label>
+      <input id="tx-search" type="search" placeholder="Type a word you see on the site, such as “Reality” or “WhatsApp”" data-search /></div>
+    <p class="hint" data-search-none hidden>No text matches that search.</p>
+    <form data-texts novalidate>
+      ${GROUPS.map(
+        (g, i) => `<details class="card panel tx-group" data-group${i === 0 ? ' open' : ''}>
+          <summary><h2>${esc(g.title)}</h2><span class="hint">${g.fields.length} text${g.fields.length === 1 ? '' : 's'}</span></summary>
+          ${g.fields.map(input).join('')}</details>`,
+      ).join('')}
+      <p class="error" role="alert" data-error hidden></p>
+      <div class="actions sticky-actions"><button class="btn btn-primary" type="submit">Save text</button><span class="hint" data-unsaved></span></div>
+    </form>`;
+
+  const form = $<HTMLFormElement>('[data-texts]');
+  const boxes = () => [...form.querySelectorAll<HTMLTextAreaElement>('[data-key]')];
+  const changed = () => boxes().filter((b) => b.value !== valueOf({ key: b.dataset.key!, value: DEFAULTS[b.dataset.key!] } as Field)).length;
+  const refresh = (b: HTMLTextAreaElement) => {
+    form.querySelector<HTMLElement>(`[data-reset="${CSS.escape(b.dataset.key!)}"]`)!.hidden = b.value.trim() === DEFAULTS[b.dataset.key!].trim();
+    const n = changed();
+    $('[data-unsaved]').textContent = n ? `${n} unsaved change${n === 1 ? '' : 's'}` : '';
+  };
+  form.addEventListener('input', (e) => {
+    if (e.target instanceof HTMLTextAreaElement && e.target.dataset.key) refresh(e.target);
+  });
+  form.addEventListener('click', (e) => {
+    const key = (e.target as HTMLElement).closest<HTMLElement>('[data-reset]')?.dataset.reset;
+    if (!key) return;
+    const box = form.querySelector<HTMLTextAreaElement>(`[data-key="${CSS.escape(key)}"]`)!;
+    box.value = DEFAULTS[key];
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+    box.focus();
+  });
+
+  // Search opens the sections with matching text and hides the rest.
+  $('[data-search]').addEventListener('input', (e) => {
+    const q = (e.target as HTMLInputElement).value.trim().toLowerCase();
+    let any = false;
+    form.querySelectorAll<HTMLDetailsElement>('[data-group]').forEach((g, i) => {
+      let hits = 0;
+      g.querySelectorAll<HTMLElement>('[data-field]').forEach((field) => {
+        const text = `${field.querySelector('label')!.textContent} ${field.querySelector('textarea')!.value} ${DEFAULTS[field.dataset.field!]}`.toLowerCase();
+        const hit = !q || text.includes(q);
+        field.hidden = !hit;
+        if (hit) hits++;
+      });
+      g.hidden = hits === 0;
+      g.open = q ? hits > 0 : i === 0;
+      if (hits) any = true;
+    });
+    $('[data-search-none]').hidden = any;
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const error = $('[data-error]');
+    const texts: Record<string, string> = {};
+    for (const b of boxes()) {
+      const key = b.dataset.key!;
+      const value = b.value.replace(/\s+$/, '');
+      if (value.trim() && value.trim() !== DEFAULTS[key].trim()) texts[key] = value;
+    }
+    // Read the latest settings first, so nothing saved elsewhere is lost.
+    const { data: latest, error: readError } = await sb.from('site_settings').select('data').eq('id', 1).single();
+    if (readError) return Object.assign(error, { hidden: false, textContent: friendly(readError) });
+    const { error: err } = await sb.from('site_settings').update({ data: { ...latest.data, texts } }).eq('id', 1);
+    if (err) return Object.assign(error, { hidden: false, textContent: friendly(err) });
+    error.hidden = true;
+    for (const k of Object.keys(saved)) delete saved[k];
+    Object.assign(saved, texts);
+    boxes().forEach(refresh);
+    toast('Text saved. The site shows it within about 15 minutes; most of it straight away.');
+  });
+}
+
 /* ---------- account ---------- */
 
 function accountView() {
@@ -956,14 +1063,14 @@ function setupGrowingFields() {
     t.style.height = 'auto';
     t.style.height = `${t.scrollHeight + 3}px`;
   };
-  document.addEventListener('input', (e) => e.target instanceof HTMLTextAreaElement && e.target.matches('.grow') && size(e.target));
+  document.addEventListener('input', (e) => e.target instanceof HTMLTextAreaElement && e.target.matches('.grow, .autosize') && size(e.target));
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target instanceof HTMLTextAreaElement && e.target.matches('.grow')) {
       e.preventDefault();
       e.target.form?.requestSubmit();
     }
   });
-  const all = () => document.querySelectorAll<HTMLTextAreaElement>('textarea.grow').forEach(size);
+  const all = () => document.querySelectorAll<HTMLTextAreaElement>('textarea.grow, textarea.autosize').forEach(size);
   new MutationObserver(all).observe(main(), { childList: true, subtree: true });
   addEventListener('resize', all);
 }

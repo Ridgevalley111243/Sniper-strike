@@ -12,6 +12,19 @@ const md = new Marked({ gfm: true, breaks: true });
 md.use({ renderer: { html: ({ text }) => esc(text) } });
 export const markdown = (body: string) => md.parse(body, { async: false }) as string;
 
+/** Site text in its display form (see src/lib/texts.ts for the kinds). */
+export function formatText(kind: string, value: string) {
+  const safe = esc(value.trim());
+  if (kind === 'hl') return safe.replace(/\*([^*]+)\*/g, '<span class="hl">$1</span>');
+  if (kind === 'text') return safe.replace(/\n/g, '<br />');
+  if (kind === 'paras')
+    return safe
+      .split(/\n\s*\n/)
+      .map((p) => `<p>${p.replace(/\n/g, '<br />')}</p>`)
+      .join('');
+  return safe.replace(/\n/g, ' ');
+}
+
 /** Images uploaded in the admin are full URLs; images in the repo are paths under the site. */
 export const assetUrl = (src: string, base: string) => (/^https?:\/\//.test(src) ? src : base + src.replace(/^\/+/, ''));
 
@@ -50,19 +63,50 @@ export function cardHTML(p: Project, index: number, base: string) {
 </article>`;
 }
 
+/** Wording on project pages (Site text, under "Work page and project pages"). */
+export type ProjectLabels = Record<'back' | 'client' | 'year' | 'status' | 'link' | 'visit' | 'services' | 'next', string>;
+export const PROJECT_LABEL_KEYS: ProjectLabels = {
+  back: 'project.back',
+  client: 'project.client',
+  year: 'project.year',
+  status: 'project.status',
+  link: 'project.link',
+  visit: 'project.visit',
+  services: 'project.services',
+  next: 'project.next',
+};
+const DEFAULT_LABELS: ProjectLabels = {
+  back: 'All work',
+  client: 'Client',
+  year: 'Year',
+  status: 'Status',
+  link: 'Link',
+  visit: 'Visit site',
+  services: 'Services',
+  next: 'Next project',
+};
+
 /** The whole project page: header, cover, story, gallery and the next project. */
-export function projectHTML(p: Project, index: number, base: string, next?: { project: Project; index: number }) {
+export function projectHTML(
+  p: Project,
+  index: number,
+  base: string,
+  next?: { project: Project; index: number },
+  labels: ProjectLabels = DEFAULT_LABELS,
+) {
+  // Labels carry data-t so newer wording from the admin shows straight away.
+  const L = (k: keyof ProjectLabels) => `<span data-t="${PROJECT_LABEL_KEYS[k]}">${esc(labels[k])}</span>`;
   const facts = [
-    p.client && `<div><dt>Client</dt><dd>${esc(p.client)}</dd></div>`,
-    `<div><dt>Year</dt><dd>${p.year}</dd></div>`,
-    `<div><dt>Status</dt><dd>${esc(p.status)}</dd></div>`,
+    p.client && `<div><dt>${L('client')}</dt><dd>${esc(p.client)}</dd></div>`,
+    `<div><dt>${L('year')}</dt><dd>${p.year}</dd></div>`,
+    `<div><dt>${L('status')}</dt><dd>${esc(p.status)}</dd></div>`,
     p.link &&
-      `<div><dt>Link</dt><dd><a href="${esc(p.link)}" target="_blank" rel="noopener">Visit site ${svg(ARROW_UP_RIGHT, 16)}</a></dd></div>`,
+      `<div><dt>${L('link')}</dt><dd><a href="${esc(p.link)}" target="_blank" rel="noopener">${L('visit')} ${svg(ARROW_UP_RIGHT, 16)}</a></dd></div>`,
   ]
     .filter(Boolean)
     .join('');
   const services = p.services.length
-    ? `<div class="pd-aside"><h2 class="pd-h">Services</h2><ul class="tags">${p.services.map((s) => `<li class="tag">${esc(s)}</li>`).join('')}</ul></div>`
+    ? `<div class="pd-aside"><h2 class="pd-h">${L('services')}</h2><ul class="tags">${p.services.map((s) => `<li class="tag">${esc(s)}</li>`).join('')}</ul></div>`
     : '<div class="pd-aside"></div>';
   const gallery = p.gallery.length
     ? `<div class="container pd-gallery">${p.gallery
@@ -71,11 +115,11 @@ export function projectHTML(p: Project, index: number, base: string, next?: { pr
     : '';
   const nextHTML =
     next && next.project.slug !== p.slug
-      ? `<section class="section pd-next"><div class="container"><p class="eyebrow">Next project</p><div class="pd-next-card">${cardHTML(next.project, next.index, base)}</div></div></section>`
+      ? `<section class="section pd-next"><div class="container"><p class="eyebrow">${L('next')}</p><div class="pd-next-card">${cardHTML(next.project, next.index, base)}</div></div></section>`
       : '';
   return `<article>
   <header class="container pd-head">
-    <a class="pd-back" href="${base}work/">${svg(ARROW)} All work</a>
+    <a class="pd-back" href="${base}work/">${svg(ARROW)} ${L('back')}</a>
     ${p.category ? `<p class="eyebrow">${esc(p.category)}</p>` : ''}
     <h1>${esc(p.title)}</h1>
     ${p.summary ? `<p class="lead">${esc(p.summary)}</p>` : ''}
@@ -87,8 +131,8 @@ export function projectHTML(p: Project, index: number, base: string, next?: { pr
 </article>${nextHTML}`;
 }
 
-export function filtersHTML(groups: string[]) {
-  return [`<button type="button" aria-pressed="true" data-filter="all">All</button>`]
+export function filtersHTML(groups: string[], all = 'All') {
+  return [`<button type="button" aria-pressed="true" data-filter="all"><span data-t="workPage.all">${esc(all)}</span></button>`]
     .concat(groups.map((g) => `<button type="button" aria-pressed="false" data-filter="${esc(g)}">${esc(g)}</button>`))
     .join('');
 }

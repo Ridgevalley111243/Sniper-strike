@@ -4,20 +4,17 @@ import Base from '../../layouts/Base.astro';
 import { projects } from '../../lib/build-data';
 import { fingerprint, groupOf } from '../../lib/content';
 import { filtersHTML, workGridHTML } from '../../lib/render';
+import { t } from '../../lib/t';
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const groups = [...new Set(projects.map(groupOf))];
 ---
-<Base title="Work" description="Selected projects by Trutech Business: websites, management systems, digital commerce, graphic design and branding.">
-  <PageHero
-    eyebrow="Portfolio"
-    title="Work built for real needs."
-    lead="Websites, management systems, digital commerce and graphic design, each with an honest note on where it stands."
-  />
+<Base title={t('nav.work')} description={t('workPage.lead')}>
+  <PageHero eyebrow="workPage.eyebrow" title="workPage.title" lead="workPage.lead" />
   <section class="section">
     <div class="container">
       <h2 class="sr-only">Projects</h2>
-      <div class="filters" role="group" aria-label="Filter projects" data-filters set:html={filtersHTML(groups)} />
+      <div class="filters" role="group" aria-label="Filter projects" data-filters data-all={t('workPage.all')} set:html={filtersHTML(groups, t('workPage.all'))} />
       <div class="grid grid-3" data-grid data-fp={fingerprint(projects)} set:html={workGridHTML(projects, base, groupOf)} />
     </div>
   </section>

@@ -1,9 +1,11 @@
 ---
 import Icon from '../components/Icon.astro';
+import Text from '../components/Text.astro';
 import Base from '../layouts/Base.astro';
 import { projects } from '../lib/build-data';
 import { featuredOf, fingerprint } from '../lib/content';
 import { cardHTML } from '../lib/render';
+import { tl } from '../lib/t';
 import { site, whatsappLink } from '../site';
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
@@ -15,27 +17,24 @@ const follow = [
   ...(whatsappLink() ? [{ href: whatsappLink(), label: 'WhatsApp', icon: 'whatsapp' }] : []),
   ...(site.email ? [{ href: `mailto:${site.email}`, label: `Email: ${site.email}`, icon: 'mail' }] : []),
 ];
-const skills = [
-  ['Websites', false],
-  ['Systems', true],
-  ['Graphic design', true],
-  ['IT support', false],
-] as const;
+// A skill written as *Skill* in Site text is filled in amber.
+const skills = tl('home.skills').map((s) => ({ label: s.replace(/^\*(.*)\*$/, '$1'), on: /^\*.*\*$/.test(s) }));
+const chips = tl('home.about.chips');
 ---
 <Base>
   {/* Hero */}
   <section class="hero">
     <div class="container hero-inner">
-      <p class="badge"><span class="badge-dot" aria-hidden="true"></span>Web developer · Designer · IT support</p>
-      <h1>Ideas into <span class="hl">Reality</span></h1>
-      <p class="sub">Digital solutions practitioner based in Ghana</p>
+      <p class="badge"><span class="badge-dot" aria-hidden="true"></span><Text k="home.badge" /></p>
+      <Text as="h1" k="home.title" />
+      <Text as="p" class="sub" k="home.sub" />
 
       <div class="stage-row">
         <div class="side left">
           {
             follow.length > 0 && (
               <div class="follow">
-                <p class="muted">Follow me on</p>
+                <Text as="p" class="muted" k="home.follow" />
                 <ul class="socials">
                   {follow.map((f) => (
                     <li>
@@ -49,8 +48,8 @@ const skills = [
             )
           }
           <div class="proof">
-            <p class="proof-title">{site.services.length} service areas</p>
-            <p class="muted">Websites, systems, commerce,<br />branding and IT support</p>
+            <Text as="p" class="proof-title" k="home.proofTitle" />
+            <Text as="p" class="muted" k="home.proofText" />
           </div>
         </div>
 
@@ -61,25 +60,25 @@ const skills = [
             <img src={site.photo || leaf} alt={site.photo ? photoAlt : ''} width="380" height="500" />
           </div>
           <div class="ctas">
-            <a class="btn btn-primary" href={base + 'work/'}>See my work <Icon name="arrow" /></a>
-            <a class="btn btn-ghost" href={base + 'contact/'}>Hire me</a>
+            <a class="btn btn-primary" href={base + 'work/'}><Text k="home.ctaWork" /> <Icon name="arrow" /></a>
+            <a class="btn btn-ghost" href={base + 'contact/'}><Text k="home.ctaHire" /></a>
           </div>
         </div>
 
         <div class="side right">
           <blockquote class="quote">
             <span class="qmark" aria-hidden="true">“</span>
-            <p class="muted">Practical digital solutions for businesses, schools and people.</p>
+            <Text as="p" class="muted" k="home.quote" />
           </blockquote>
           <ul class="skills" aria-label="What I do">
-            {skills.map(([s, on]) => <li class:list={['skill', { on }]}>{s}</li>)}
+            {skills.map((s) => <li class:list={['skill', { on: s.on }]}>{s.label}</li>)}
           </ul>
         </div>
       </div>
 
       <a class="available" href={base + 'contact/'}>
         <span class="arrow-badge"><Icon name="arrow-up-right" size={18} /></span>
-        <span>Available<br />for work</span>
+        <Text k="home.available" />
       </a>
     </div>
   </section>
@@ -89,10 +88,10 @@ const skills = [
     <div class="container">
       <div class="section-head reveal">
         <div>
-          <p class="eyebrow">My Services</p>
-          <h2>How I Bring <span class="hl">Ideas to Life</span></h2>
+          <Text as="p" class="eyebrow" k="home.services.label" />
+          <Text as="h2" k="home.services.title" />
         </div>
-        <a class="pill-link" href={base + 'services/'}><span>View all services</span><span class="pill-arrow"><Icon name="arrow" size={18} /></span></a>
+        <a class="pill-link" href={base + 'services/'}><Text k="home.services.more" /><span class="pill-arrow"><Icon name="arrow" size={18} /></span></a>
       </div>
       <div class="svc-list">
         {
@@ -100,12 +99,12 @@ const skills = [
             <details class="svc reveal" name="services" open={i === 0}>
               <summary>
                 <span class="svc-n">{String(i + 1).padStart(2, '0')}.</span>
-                <span class="svc-title">{s.title}</span>
+                <Text class="svc-title" k={`service.${i + 1}.title`} />
                 <span class="arrow-badge" aria-hidden="true"><Icon name="arrow-up-right" size={16} /></span>
               </summary>
               <div class="svc-body">
                 <ul class="svc-tags">{s.points.map((pt) => <li>{pt}</li>)}</ul>
-                <p>{s.text}</p>
+                <Text as="p" k={`service.${i + 1}.text`} />
               </div>
             </details>
           ))
@@ -121,26 +120,25 @@ const skills = [
         <div class:list={['arch', 'small', { 'has-photo': site.photo }]} data-photo-slot data-photo={site.photo} data-fallback={leaf}>
           <img src={site.photo || leaf} alt={site.photo ? photoAlt : ''} width="340" height="440" loading="lazy" />
         </div>
-        <span class="float-chip one">Websites</span>
-        <span class="float-chip two">Systems</span>
+        {chips.map((c, i) => <span class:list={['float-chip', i % 2 ? 'two' : 'one']}>{c}</span>)}
       </div>
       <div class="about-text reveal">
-        <p class="eyebrow">About Me</p>
-        <h2>Who is <span class="hl">Trutech Business?</span></h2>
-        <p class="lead">{site.about.paragraphs[0]} Everything I build starts from a real need: what problem it solves, how people will use it, and how it will be run.</p>
+        <Text as="p" class="eyebrow" k="home.about.label" />
+        <Text as="h2" k="home.about.title" />
+        <Text as="p" class="lead" k="home.about.text" />
         <div class="stats">
           {
-            site.about.stats.map((s) => (
+            site.about.stats.map((_, i) => (
               <div class="stat">
-                <span class="stat-v">{s.value}+</span>
-                <span class="muted">{s.label}</span>
+                <span class="stat-v"><Text k={`stat.${i + 1}.value`} />+</span>
+                <Text class="muted" k={`stat.${i + 1}.label`} />
               </div>
             ))
           }
         </div>
         <div class="about-actions">
-          <a class="btn btn-primary" href={base + 'about/'}>More about me <Icon name="arrow" /></a>
-          <a class="btn btn-ghost" href={base + 'contact/'}>Contact me</a>
+          <a class="btn btn-primary" href={base + 'about/'}><Text k="home.about.more" /> <Icon name="arrow" /></a>
+          <a class="btn btn-ghost" href={base + 'contact/'}><Text k="home.about.contact" /></a>
         </div>
       </div>
     </div>
@@ -151,10 +149,10 @@ const skills = [
     <div class="container">
       <div class="section-head reveal">
         <div>
-          <p class="eyebrow">Selected Work</p>
-          <h2>Systems, Platforms <span class="hl">&amp; Brands</span></h2>
+          <Text as="p" class="eyebrow" k="home.work.label" />
+          <Text as="h2" k="home.work.title" />
         </div>
-        <a class="pill-link" href={base + 'work/'}><span>View all work</span><span class="pill-arrow"><Icon name="arrow" size={18} /></span></a>
+        <a class="pill-link" href={base + 'work/'}><Text k="home.work.more" /><span class="pill-arrow"><Icon name="arrow" size={18} /></span></a>
       </div>
       <div class="grid grid-2" data-featured data-fp={fingerprint(featured)} set:html={featured.map((p, i) => cardHTML(p, i, base)).join('')} />
     </div>
@@ -165,17 +163,17 @@ const skills = [
     <div class="container">
       <div class="section-head reveal">
         <div>
-          <p class="eyebrow">How I Work</p>
-          <h2>From the first conversation <span class="hl">to launch</span></h2>
+          <Text as="p" class="eyebrow" k="home.process.label" />
+          <Text as="h2" k="home.process.title" />
         </div>
       </div>
       <ol class="grid grid-4 steps">
         {
-          site.process.map((s, i) => (
+          site.process.map((_, i) => (
             <li class:list={['step reveal', { on: i === 0 }]} style={`transition-delay:${i * 80}ms`}>
               <span class="num">{String(i + 1).padStart(2, '0')}</span>
-              <h3>{s.title}</h3>
-              <p>{s.text}</p>
+              <Text as="h3" k={`process.${i + 1}.title`} />
+              <Text as="p" k={`process.${i + 1}.text`} />
             </li>
           ))
         }
@@ -204,9 +202,9 @@ const skills = [
   {/* CTA */}
   <section class="cta-band">
     <div class="container cta reveal">
-      <h2>Have an idea? Let’s turn it into reality.</h2>
-      <p>Tell me what you need, whether it’s a website, a system, a brand or help with your devices, and I’ll get back to you within a day.</p>
-      <a class="btn cta-btn" href={base + 'contact/'}>Start a project <span class="cta-arrow"><Icon name="arrow" size={18} /></span></a>
+      <Text as="h2" k="home.cta.title" />
+      <Text as="p" k="home.cta.text" />
+      <a class="btn cta-btn" href={base + 'contact/'}><Text k="home.cta.button" /> <span class="cta-arrow"><Icon name="arrow" size={18} /></span></a>
     </div>
   </section>
 </Base>

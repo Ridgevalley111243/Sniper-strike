@@ -41,6 +41,8 @@ export type Settings = {
   /** Profile photo URL (uploaded in the admin), or '' for none. */
   photo: string;
   socials: Social[];
+  /** Site text edited in the admin: { key: text } (see src/lib/texts.ts). */
+  texts: Record<string, string>;
 };
 
 const PROJECT_COLUMNS = 'slug,title,client,category,year,status,summary,cover,gallery,services,link,featured,sort_order,body';
@@ -83,6 +85,11 @@ export function normalizeSettings(data: Record<string, unknown> | null | undefin
     socials: socials
       .map((s: Record<string, unknown>) => ({ label: str(s?.label), handle: str(s?.handle), url: str(s?.url), icon: str(s?.icon) }))
       .filter((s: Social) => s.url),
+    texts: Object.fromEntries(
+      Object.entries(d.texts && typeof d.texts === 'object' ? (d.texts as Record<string, unknown>) : {}).filter(
+        (e): e is [string, string] => typeof e[1] === 'string',
+      ),
+    ),
   };
 }
 
@@ -103,9 +110,13 @@ export async function fetchProjects(): Promise<Project[]> {
   return rows.map(normalizeProject);
 }
 
-export async function fetchSettings(): Promise<Settings> {
-  const rows = await rest<{ data: Record<string, unknown> }[]>('site_settings?select=data&id=eq.1');
-  return normalizeSettings(rows[0]?.data);
+// One request per page, however many parts of the page need the settings.
+let settingsRequest: Promise<Settings> | undefined;
+export function fetchSettings(): Promise<Settings> {
+  settingsRequest ??= rest<{ data: Record<string, unknown> }[]>('site_settings?select=data&id=eq.1').then((rows) =>
+    normalizeSettings(rows[0]?.data),
+  );
+  return settingsRequest;
 }
 
 /** Changes whenever any published project or the settings change. */
