@@ -11,6 +11,7 @@ import { site, whatsappLink } from '../site';
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const featured = featuredOf(projects);
 const leaf = `${base}brand/leaf-light.png`;
+const aboutPhoto = site.aboutPhoto || site.photo;
 const photoAlt = `Photo of ${site.owner || 'the founder of Trutech Business'}`;
 const follow = [
   ...site.socials.map((s) => ({ href: s.url, label: `${s.label}: ${s.handle}`, icon: s.icon })),
@@ -116,9 +117,9 @@ const chips = tl('home.about.chips');
   {/* About */}
   <section class="section about">
     <div class="container about-grid">
-      <div class="about-card reveal" aria-hidden={site.photo ? undefined : 'true'}>
-        <div class:list={['arch', 'small', { 'has-photo': site.photo }]} data-photo-slot data-photo={site.photo} data-fallback={leaf}>
-          <img src={site.photo || leaf} alt={site.photo ? photoAlt : ''} width="340" height="440" loading="lazy" />
+      <div class="about-card reveal" aria-hidden={aboutPhoto ? undefined : 'true'}>
+        <div class:list={['arch', 'small', { 'has-photo': aboutPhoto }]} data-photo-slot="about" data-photo={aboutPhoto} data-fallback={leaf}>
+          <img src={aboutPhoto || leaf} alt={aboutPhoto ? photoAlt : ''} width="340" height="440" loading="lazy" />
         </div>
         {chips.map((c, i) => <span class:list={['float-chip', i % 2 ? 'two' : 'one']}>{c}</span>)}
       </div>

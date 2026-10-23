@@ -7,14 +7,15 @@ import { t } from '../lib/t';
 import { site } from '../site';
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const logo = `${base}brand/logo-on-dark.png`;
+const photo = site.aboutPhoto || site.photo;
 const photoAlt = `Photo of ${site.owner || 'the founder of Trutech Business'}`;
 ---
 <Base title={t('about.eyebrow')} description={site.about.paragraphs[0]}>
   <PageHero eyebrow="about.eyebrow" title="about.title" lead="about.lead" />
   <section class="section">
     <div class="container story">
-      <div class:list={['portrait reveal', { 'has-photo': site.photo }]} data-photo-slot data-photo={site.photo} data-fallback={logo}>
-        <img src={site.photo || logo} alt={site.photo ? photoAlt : ''} />
+      <div class:list={['portrait reveal', { 'has-photo': photo }]} data-photo-slot="about" data-photo={photo} data-fallback={logo}>
+        <img src={photo || logo} alt={photo ? photoAlt : ''} />
       </div>
       <div class="reveal">
         <Text as="div" class="text" k="about.story" />
