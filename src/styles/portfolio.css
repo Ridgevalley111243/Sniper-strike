@@ -4,13 +4,10 @@
 /* ---- Cover ---- */
 .cover {
   position: relative;
-  aspect-ratio: 4 / 3;
-  border-radius: var(--radius);
+  aspect-ratio: 16 / 10;
+  border-radius: 16px;
   overflow: hidden;
-  background:
-    radial-gradient(120% 80% at 15% 110%, var(--c) 0%, transparent 55%),
-    radial-gradient(90% 70% at 100% 0%, var(--b) 0%, transparent 60%),
-    linear-gradient(var(--angle), var(--a), var(--b));
+  background: linear-gradient(135deg, #242424 0%, #2c2412 60%, #402800 100%);
   isolation: isolate;
 }
 .cover > img {
@@ -25,108 +22,108 @@
   display: grid;
   place-items: center;
 }
-.cover-art::before {
-  content: '';
-  position: absolute;
-  inset: -20%;
-  background: repeating-radial-gradient(circle at 70% 120%, rgb(255 255 255 / 0.07) 0 2px, transparent 2px 34px);
-}
 .cover-mark {
-  width: 30%;
-  opacity: 0.9;
+  width: 26%;
+  max-width: 150px;
+  opacity: 0.95;
   transition: transform 0.6s var(--ease);
 }
 .cover-label {
   position: absolute;
   left: 18px;
-  bottom: 16px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  bottom: 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgb(246 250 253 / 0.85);
+  color: var(--amber);
 }
 
 /* ---- Card ---- */
+.p-card {
+  height: 100%;
+}
 .p-link {
   display: grid;
-  gap: 18px;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
   height: 100%;
-  text-decoration: none;
-}
-.p-media {
-  position: relative;
+  padding: 12px 12px 20px;
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-decoration: none;
   transition:
-    transform 0.4s var(--ease),
-    box-shadow 0.4s var(--ease);
+    border-color 0.3s var(--ease),
+    transform 0.3s var(--ease);
 }
-.p-link:hover .p-media {
+.p-link:hover {
+  border-color: var(--amber);
   transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
 }
 .p-link:hover .cover > img,
 .p-link:hover .cover-mark {
   transform: scale(1.05);
 }
+.p-link:hover .arrow-badge {
+  transform: rotate(45deg);
+}
+.p-media {
+  position: relative;
+}
 .p-status {
   position: absolute;
-  top: 14px;
-  left: 14px;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  background: rgb(255 255 255 / 0.92);
-  color: var(--navy-950);
+  font-weight: 700;
+  background: rgb(18 18 18 / 0.85);
+  color: #fff;
   backdrop-filter: blur(6px);
 }
 .p-status::before {
   content: '';
-  display: inline-block;
   width: 7px;
   height: 7px;
-  margin-right: 7px;
   border-radius: 50%;
-  background: var(--blue-500);
-  vertical-align: 1px;
+  background: var(--amber);
 }
 .p-status.live::before,
 .p-status.completed::before {
-  background: #1f8a5b;
+  background: #34c27a;
 }
 .p-status.planned::before {
-  background: #8a99ad;
+  background: #a3a3a3;
+}
+.p-body {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-inline: 8px;
 }
 .p-meta {
   margin: 0 0 6px;
   font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 700;
   color: var(--accent);
 }
 .p-card h3 {
   margin-bottom: 8px;
 }
 .p-summary {
+  margin: 0;
   color: var(--text-muted);
-  margin-bottom: 12px;
-}
-.p-more {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 0.92rem;
-}
-.p-more svg {
-  transition: transform 0.2s var(--ease);
-}
-.p-link:hover .p-more svg {
-  transform: translateX(4px);
+  font-size: 0.95rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ---- Project page ---- */
@@ -134,49 +131,61 @@
   padding-top: clamp(40px, 6vw, 72px);
 }
 .pd-back {
-  display: flex;
+  display: inline-flex;
   width: fit-content;
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  margin-bottom: 24px;
-  font-weight: 600;
+  margin-bottom: 20px;
+  padding: 0 16px 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-weight: 700;
+  font-size: 0.9rem;
   text-decoration: none;
-  color: var(--accent);
+}
+.pd-back:hover {
+  border-color: var(--amber);
 }
 .pd-back svg {
   transform: rotate(180deg);
 }
 .pd-head h1 {
-  font-size: clamp(2.4rem, 5.6vw, 4.6rem);
+  font-size: clamp(2.3rem, 5.4vw, 4.2rem);
   max-width: 18ch;
 }
 .pd-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px 48px;
-  margin: 36px 0 0;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
+  gap: 12px;
+  margin: 32px 0 0;
+}
+.pd-facts > div {
+  padding: 14px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 .pd-facts dt {
   font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
 .pd-facts dd {
   margin: 4px 0 0;
-  font-weight: 600;
+  font-weight: 700;
 }
 .pd-facts dd a {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  color: var(--accent);
 }
 .pd-media {
-  margin-block: clamp(36px, 5vw, 56px);
+  margin-block: clamp(32px, 5vw, 52px);
 }
 .cover-wide {
   aspect-ratio: 21 / 9;
@@ -199,17 +208,17 @@
   }
   .pd-body .pd-aside {
     position: sticky;
-    top: 100px;
+    top: 110px;
     align-self: start;
   }
 }
 .pd-h {
   font-family: var(--font-body);
   font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--accent);
   margin-bottom: 14px;
 }
 .prose h2:first-child {
@@ -221,7 +230,7 @@
 /* Masonry columns, so flyers of different shapes keep their proportions. */
 .pd-gallery {
   columns: 1;
-  column-gap: 20px;
+  column-gap: 18px;
   padding-bottom: 80px;
 }
 @media (min-width: 640px) {
@@ -236,13 +245,16 @@
 }
 .pd-gallery img {
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   break-inside: avoid;
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
 }
 .pd-next {
-  background: var(--surface-2);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.pd-next .p-link {
+  background: var(--bg);
 }
 .pd-next-card {
   max-width: 560px;

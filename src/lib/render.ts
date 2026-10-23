@@ -20,21 +20,12 @@ const svg = (paths: string, size = 18) =>
 const ARROW = '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>';
 const ARROW_UP_RIGHT = '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>';
 
-const PALETTES = [
-  ['#0a1931', '#1a3d63', '#4a7fa7'],
-  ['#1a3d63', '#4a7fa7', '#b3cfe5'],
-  ['#0a1931', '#4a7fa7', '#b3cfe5'],
-  ['#132a4a', '#1a3d63', '#7ea6c7'],
-];
-
-/** The project's cover image, or a branded cover generated from the palette. */
-export function coverHTML(p: Project, seed: number, base: string, extraClass = '') {
-  const [a, b, c] = PALETTES[seed % PALETTES.length];
-  const angle = 120 + ((seed * 47) % 120);
+/** The project's cover image, or a dark branded cover with the leaf and category. */
+export function coverHTML(p: Project, _seed: number, base: string, extraClass = '') {
   const inner = p.cover
     ? `<img src="${esc(assetUrl(p.cover, base))}" alt="${esc(`${p.title} preview`)}" loading="lazy" decoding="async" />`
     : `<div class="cover-art" aria-hidden="true"><img src="${base}brand/leaf-light.png" alt="" class="cover-mark" loading="lazy" /><span class="cover-label">${esc(p.category)}</span></div>`;
-  return `<div class="cover ${extraClass}" style="--a:${a};--b:${b};--c:${c};--angle:${angle}deg">${inner}</div>`;
+  return `<div class="cover ${extraClass}">${inner}</div>`;
 }
 
 const statusClass = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
@@ -48,10 +39,12 @@ export function cardHTML(p: Project, index: number, base: string) {
   <a href="${base}work/${esc(p.slug)}/" class="p-link">
     <div class="p-media">${coverHTML(p, index, base)}<span class="p-status ${statusClass(p.status)}">${esc(p.status)}</span></div>
     <div class="p-body">
-      <p class="p-meta">${esc(p.category)}${p.category ? ' · ' : ''}${p.year}</p>
-      <h3>${esc(p.title)}</h3>
-      <p class="p-summary">${esc(p.summary)}</p>
-      <span class="p-more">View case study ${svg(ARROW)}</span>
+      <div>
+        <p class="p-meta">${esc(p.category)}${p.category ? ' · ' : ''}${p.year}</p>
+        <h3>${esc(p.title)}</h3>
+        <p class="p-summary">${esc(p.summary)}</p>
+      </div>
+      <span class="arrow-badge" aria-hidden="true">${svg(ARROW_UP_RIGHT, 16)}</span>
     </div>
   </a>
 </article>`;
