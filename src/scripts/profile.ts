@@ -5,7 +5,7 @@
 //
 // The photo stays hidden (global.css) until this has checked which photo is
 // current, so a photo replaced since the last build never flashes on screen.
-import { fetchSettings } from '../lib/content';
+import { CENTRED, fetchSettings, photoPosStyle } from '../lib/content';
 
 const reveal = (slot: HTMLElement) => slot.classList.add('photo-ready');
 
@@ -29,8 +29,11 @@ export async function liveProfilePhoto() {
   // If the check takes too long (slow connection), show what the page has.
   const fallback = setTimeout(() => slots.forEach(reveal), 4000);
   try {
-    const { photo, aboutPhoto, owner } = await fetchSettings();
+    const { photo, aboutPhoto, aboutPhotoPos, owner } = await fetchSettings();
     const photoFor = (slot: HTMLElement) => (slot.dataset.photoSlot === 'about' && aboutPhoto) || photo;
+    // About photos are placed as set in the admin.
+    for (const slot of slots.filter((s) => s.dataset.photoSlot === 'about'))
+      slot.setAttribute('style', photoPosStyle(aboutPhoto ? aboutPhotoPos : CENTRED));
     await Promise.all(slots.map((slot) => show(slot, photoFor(slot), owner)));
   } finally {
     clearTimeout(fallback);

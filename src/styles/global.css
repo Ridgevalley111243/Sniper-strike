@@ -123,6 +123,17 @@
 .js [data-photo-slot]:not(.photo-ready) img {
   opacity: 0;
 }
+/* A photo that fills its rectangle, placed as set in the admin (About photo
+   position): --px/--py is the point kept in view, --zoom how far it is
+   zoomed in. */
+.placed.has-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--px, 50%) var(--py, 50%);
+  transform: scale(var(--zoom, 1));
+  transform-origin: var(--px, 50%) var(--py, 50%);
+}
 
 /* Visible to screen readers only. */
 .sr-only {

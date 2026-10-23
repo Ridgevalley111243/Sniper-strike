@@ -2,7 +2,7 @@
 // settings and account. Everything is stored in Supabase; row level security
 // only lets accounts listed in site_admins change anything.
 import { createClient, type Session } from '@supabase/supabase-js';
-import { STATUSES, SUPABASE_ANON_KEY, SUPABASE_URL } from '../lib/content';
+import { CENTRED, photoPos, photoPosStyle, STATUSES, SUPABASE_ANON_KEY, SUPABASE_URL, type PhotoPos } from '../lib/content';
 import { esc } from '../lib/render';
 import { DEFAULTS, GROUPS, type Field } from '../lib/texts';
 
@@ -776,6 +776,90 @@ async function clientDetail(id: string) {
 
 type Social = { label: string; handle: string; url: string; icon: string };
 
+// Lets the About photo be moved and zoomed inside its rectangle, the shape of
+// the About card on the home page. Returns the function that redraws it.
+function placeAboutPhoto(s: Record<string, any>) {
+  const box = $('[data-placer]');
+  let pos: PhotoPos = photoPos(s.aboutPhotoPos);
+  const apply = () => {
+    $('[data-frame]', box).setAttribute('style', photoPosStyle(pos));
+    $<HTMLInputElement>('[data-zoom]', box).value = String(pos.zoom);
+    $<HTMLInputElement>('[data-x]', box).value = String(pos.x);
+    $<HTMLInputElement>('[data-y]', box).value = String(pos.y);
+  };
+  const draw = () => {
+    box.hidden = !s.aboutPhoto;
+    if (!s.aboutPhoto) return;
+    pos = photoPos(s.aboutPhotoPos);
+    box.innerHTML = `<h3>Position</h3>
+      <p class="hint">Drag the photo to move it inside the rectangle, and use Zoom to make it bigger. This is how it shows in the About section.</p>
+      <div class="placer-row">
+        <div class="placer-frame placed has-photo" data-frame><img src="${attr(s.aboutPhoto)}" alt="" draggable="false" /></div>
+        <div class="placer-controls">
+          <div class="field"><label for="pl-zoom">Zoom</label><input id="pl-zoom" type="range" min="1" max="3" step="0.01" data-zoom /></div>
+          <div class="field"><label for="pl-x">Left – right</label><input id="pl-x" type="range" min="0" max="100" step="0.5" data-x /></div>
+          <div class="field"><label for="pl-y">Up – down</label><input id="pl-y" type="range" min="0" max="100" step="0.5" data-y /></div>
+          <div class="actions"><button class="btn btn-primary btn-sm" type="button" data-place-save>Save position</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-place-reset>Centre</button></div>
+        </div>
+      </div>`;
+    apply();
+  };
+  box.addEventListener('input', (e) => {
+    const el = e.target as HTMLInputElement;
+    const k = el.dataset.zoom !== undefined ? 'zoom' : el.dataset.x !== undefined ? 'x' : el.dataset.y !== undefined ? 'y' : '';
+    if (!k) return;
+    pos = { ...pos, [k]: Number(el.value) };
+    apply();
+  });
+  // Dragging moves the photo with the pointer.
+  box.addEventListener('pointerdown', (e) => {
+    const frame = (e.target as HTMLElement).closest<HTMLElement>('[data-frame]');
+    if (!frame) return;
+    e.preventDefault();
+    frame.setPointerCapture(e.pointerId);
+    let last = { x: e.clientX, y: e.clientY };
+    const move = (ev: PointerEvent) => {
+      const { width, height } = frame.getBoundingClientRect();
+      const clampPct = (v: number) => Math.min(100, Math.max(0, Math.round(v * 2) / 2));
+      pos = {
+        ...pos,
+        x: clampPct(pos.x - ((ev.clientX - last.x) / width) * 100),
+        y: clampPct(pos.y - ((ev.clientY - last.y) / height) * 100),
+      };
+      last = { x: ev.clientX, y: ev.clientY };
+      apply();
+    };
+    const end = () => {
+      frame.removeEventListener('pointermove', move);
+      frame.removeEventListener('pointerup', end);
+      frame.removeEventListener('pointercancel', end);
+    };
+    frame.addEventListener('pointermove', move);
+    frame.addEventListener('pointerup', end);
+    frame.addEventListener('pointercancel', end);
+  });
+  box.addEventListener('click', async (e) => {
+    const el = e.target as HTMLElement;
+    if (el.matches('[data-place-reset]')) {
+      pos = { ...CENTRED };
+      apply();
+    }
+    if (!el.matches('[data-place-save]')) return;
+    try {
+      const { data: latest, error: readError } = await sb.from('site_settings').select('data').eq('id', 1).single();
+      if (readError) throw readError;
+      const { error: saveError } = await sb.from('site_settings').update({ data: { ...latest.data, aboutPhotoPos: pos } }).eq('id', 1);
+      if (saveError) throw saveError;
+      s.aboutPhotoPos = pos;
+      toast('Photo position saved.');
+    } catch (err) {
+      toast(friendly(err), true);
+    }
+  });
+  return draw;
+}
+
 async function settingsForm() {
   const { data, error } = await sb.from('site_settings').select('data').eq('id', 1).maybeSingle();
   if (error) throw error;
@@ -792,6 +876,7 @@ async function settingsForm() {
       <p class="hint">Shown in the About section of the home page and on the About page. Without one, those places show your profile photo.</p>
       <div class="profile" data-photo="aboutPhoto"></div>
       <div class="progress" data-progress hidden><span data-progress-text></span><progress max="1" value="0"></progress></div>
+      <div class="placer" data-placer hidden></div>
     </section>
     <form data-settings novalidate>
       <section class="card panel"><h2>You</h2>
@@ -816,6 +901,7 @@ async function settingsForm() {
   // Each photo is saved on its own, straight after upload, so it never waits
   // for the rest of the form.
   const photoNames: Record<string, string> = { photo: 'Profile photo', aboutPhoto: 'About photo' };
+  const drawPlacer = placeAboutPhoto(s);
   for (const key of Object.keys(photoNames)) {
     const name = photoNames[key];
     const box = $(`[data-photo="${key}"]`);
@@ -824,14 +910,17 @@ async function settingsForm() {
       box.innerHTML = `${s[key] ? `<img src="${attr(s[key])}" alt="Your ${name.toLowerCase()}" />` : '<span class="avatar-empty" aria-hidden="true">No photo</span>'}
         <div class="actions"><label class="upload">${s[key] ? 'Change photo' : '+ Upload photo'}<input type="file" accept="image/*" data-photo-input /></label>
         ${s[key] ? '<button class="btn btn-ghost btn-sm" type="button" data-photo-remove>Remove</button>' : ''}</div>`;
+      if (key === 'aboutPhoto') drawPlacer();
     };
     const savePhoto = async (photo: string) => {
       const { data: latest, error: readError } = await sb.from('site_settings').select('data').eq('id', 1).single();
       if (readError) throw readError;
-      const { error: saveError } = await sb.from('site_settings').update({ data: { ...latest.data, [key]: photo } }).eq('id', 1);
+      // A new About photo starts centred.
+      const extra = key === 'aboutPhoto' ? { aboutPhotoPos: { ...CENTRED } } : {};
+      const { error: saveError } = await sb.from('site_settings').update({ data: { ...latest.data, [key]: photo, ...extra } }).eq('id', 1);
       if (saveError) throw saveError;
       const old = mediaPath(s[key]);
-      s[key] = photo;
+      Object.assign(s, { [key]: photo, ...extra });
       // Keep a file the other photo still uses.
       if (old && !Object.keys(photoNames).some((k) => mediaPath(s[k]) === old)) await sb.storage.from(MEDIA).remove([old]);
       drawPhoto();

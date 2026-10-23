@@ -31,6 +31,10 @@ export type Project = {
 };
 
 export type Social = { label: string; handle: string; url: string; icon: string };
+/** How the About photo sits in its rectangle: the point to keep in view, as
+ * percentages from the left and top, and how far it is zoomed in. */
+export type PhotoPos = { x: number; y: number; zoom: number };
+export const CENTRED: PhotoPos = { x: 50, y: 50, zoom: 1 };
 export type Settings = {
   owner: string;
   location: string;
@@ -42,6 +46,7 @@ export type Settings = {
   photo: string;
   /** Photo for the About section and page, or '' to use the profile photo. */
   aboutPhoto: string;
+  aboutPhotoPos: PhotoPos;
   socials: Social[];
   /** Site text edited in the admin: { key: text } (see src/lib/texts.ts). */
   texts: Record<string, string>;
@@ -73,6 +78,17 @@ export function normalizeProject(row: Record<string, unknown>): Project {
   };
 }
 
+const clamp = (v: unknown, min: number, max: number, fallback: number) =>
+  Number.isFinite(Number(v)) && v !== null && v !== '' ? Math.min(max, Math.max(min, Number(v))) : fallback;
+
+export function photoPos(v: unknown): PhotoPos {
+  const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  return { x: clamp(o.x, 0, 100, 50), y: clamp(o.y, 0, 100, 50), zoom: clamp(o.zoom, 1, 3, 1) };
+}
+
+/** CSS variables that place a photo (see [data-photo-slot] in global.css). */
+export const photoPosStyle = (p: PhotoPos) => `--px:${p.x}%;--py:${p.y}%;--zoom:${p.zoom}`;
+
 export function normalizeSettings(data: Record<string, unknown> | null | undefined): Settings {
   const d = data ?? {};
   const socials = Array.isArray(d.socials) ? d.socials : [];
@@ -85,6 +101,7 @@ export function normalizeSettings(data: Record<string, unknown> | null | undefin
     whatsappName: str(d.whatsappName),
     photo: /^https?:\/\//.test(str(d.photo)) ? str(d.photo) : '',
     aboutPhoto: /^https?:\/\//.test(str(d.aboutPhoto)) ? str(d.aboutPhoto) : '',
+    aboutPhotoPos: photoPos(d.aboutPhotoPos),
     socials: socials
       .map((s: Record<string, unknown>) => ({ label: str(s?.label), handle: str(s?.handle), url: str(s?.url), icon: str(s?.icon) }))
       .filter((s: Social) => s.url),
