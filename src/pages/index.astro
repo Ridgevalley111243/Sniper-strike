@@ -1,61 +1,87 @@
 ---
-import FlowBackground from '../components/FlowBackground.astro';
 import Icon from '../components/Icon.astro';
 import Base from '../layouts/Base.astro';
 import { projects } from '../lib/build-data';
 import { featuredOf, fingerprint } from '../lib/content';
 import { cardHTML } from '../lib/render';
-import { site } from '../site';
+import { site, whatsappLink } from '../site';
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const featured = featuredOf(projects);
-const building = projects.filter((p) => p.status === 'In development').slice(0, 2);
+const leaf = `${base}brand/leaf-light.png`;
+const photoAlt = `Photo of ${site.owner || 'the founder of Trutech Business'}`;
+const follow = [
+  ...site.socials.map((s) => ({ href: s.url, label: `${s.label}: ${s.handle}`, icon: s.icon })),
+  ...(whatsappLink() ? [{ href: whatsappLink(), label: 'WhatsApp', icon: 'whatsapp' }] : []),
+  ...(site.email ? [{ href: `mailto:${site.email}`, label: `Email: ${site.email}`, icon: 'mail' }] : []),
+];
+const skills = [
+  ['Websites', false],
+  ['Systems', true],
+  ['Graphic design', true],
+  ['IT support', false],
+] as const;
 ---
-<Base overDark>
+<Base>
   {/* Hero */}
   <section class="hero">
-    <FlowBackground />
-    {/* Showreel. Muted and inline so phones autoplay it; the smaller file is
-         used on narrow screens, MP4 is the fallback for browsers without WebM.
-         Visitors who prefer reduced motion get the still poster instead. */}
-    <video class="reel" autoplay muted loop playsinline preload="metadata" poster={base + 'video/hero-poster.jpg'} aria-hidden="true">
-      <source media="(max-width: 768px)" src={base + 'video/hero-720.webm'} type="video/webm" />
-      <source src={base + 'video/hero-1080.webm'} type="video/webm" />
-      <source src={base + 'video/hero-720.mp4'} type="video/mp4" />
-    </video>
-    <div class="shade" aria-hidden="true"></div>
-    <button class="reel-toggle" type="button" aria-label="Pause background video" aria-pressed="false">
-      <span class="i-pause" aria-hidden="true"></span>
-    </button>
     <div class="container hero-inner">
-      <div class="copy">
-        <p class="pill"><span class="dot"></span>Trutech Business · Ghana</p>
-        <h1>Where ideas turn into <em>reality.</em></h1>
-        <p class="sub">{site.headline} {site.intro}</p>
-        <div class="actions">
-          <a class="btn btn-light" href={base + 'work/'}>See my work <Icon name="arrow" /></a>
-          <a class="btn btn-ghost" href={base + 'contact/'}>Start a project</a>
+      <p class="badge"><span class="badge-dot" aria-hidden="true"></span>Web developer · Designer · IT support</p>
+      <h1>Ideas into <span class="hl">Reality</span></h1>
+      <p class="sub">Digital solutions practitioner based in Ghana</p>
+
+      <div class="stage-row">
+        <div class="side left">
+          {
+            follow.length > 0 && (
+              <div class="follow">
+                <p class="muted">Follow me on</p>
+                <ul class="socials">
+                  {follow.map((f) => (
+                    <li>
+                      <a href={f.href} aria-label={f.label} target={f.href.startsWith('http') ? '_blank' : undefined} rel="noopener">
+                        <Icon name={f.icon} size={18} />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          }
+          <div class="proof">
+            <p class="proof-title">{site.services.length} service areas</p>
+            <p class="muted">Websites, systems, commerce,<br />branding and IT support</p>
+          </div>
+        </div>
+
+        <div class="stage">
+          <span class="watermark" aria-hidden="true">TRUTECH</span>
+          <span class="disc" aria-hidden="true"></span>
+          <div class:list={['arch', { 'has-photo': site.photo }]} data-photo-slot data-photo={site.photo} data-fallback={leaf}>
+            <img src={site.photo || leaf} alt={site.photo ? photoAlt : ''} width="380" height="500" />
+          </div>
+          <div class="ctas">
+            <a class="btn btn-primary" href={base + 'work/'}>See my work <Icon name="arrow" /></a>
+            <a class="btn btn-ghost" href={base + 'contact/'}>Hire me</a>
+          </div>
+        </div>
+
+        <div class="side right">
+          <blockquote class="quote">
+            <span class="qmark" aria-hidden="true">“</span>
+            <p class="muted">Practical digital solutions for businesses, schools and people.</p>
+          </blockquote>
+          <ul class="skills" aria-label="What I do">
+            {skills.map(([s, on]) => <li class:list={['skill', { on }]}>{s}</li>)}
+          </ul>
         </div>
       </div>
-      {
-        building.length > 0 && (
-          <aside class="now" aria-label="Currently building">
-            <p class="now-label">Currently building</p>
-            <ul>
-              {building.map((p) => (
-                <li>
-                  <a href={`${base}work/${p.slug}/`}>
-                    <span class="now-title">{p.title}</span>
-                    <span class="now-meta">{p.category}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </aside>
-        )
-      }
+
+      <a class="available" href={base + 'contact/'}>
+        <span class="arrow-badge"><Icon name="arrow-up-right" size={18} /></span>
+        <span>Available<br />for work</span>
+      </a>
     </div>
-    <a class="scroll" href="#services" aria-label="Scroll to services"><span></span></a>
   </section>
 
   {/* Services */}
@@ -63,61 +89,74 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     <div class="container">
       <div class="section-head reveal">
         <div>
-          <p class="eyebrow">What I do</p>
-          <h2>Technology and creativity, working together.</h2>
+          <p class="eyebrow">My Services</p>
+          <h2>How I Bring <span class="hl">Ideas to Life</span></h2>
         </div>
-        <a class="btn btn-ghost" href={base + 'services/'}>All services <Icon name="arrow" /></a>
+        <a class="pill-link" href={base + 'services/'}><span>View all services</span><span class="pill-arrow"><Icon name="arrow" size={18} /></span></a>
       </div>
-      <div class="grid grid-3">
+      <div class="svc-list">
         {
           site.services.map((s, i) => (
-            <article class="card service reveal" style={`transition-delay:${(i % 3) * 80}ms`}>
-              <span class="icon"><Icon name={s.icon} /></span>
-              <h3>{s.title}</h3>
-              <p class="muted">{s.text}</p>
-            </article>
+            <details class="svc reveal" name="services" open={i === 0}>
+              <summary>
+                <span class="svc-n">{String(i + 1).padStart(2, '0')}.</span>
+                <span class="svc-title">{s.title}</span>
+                <span class="arrow-badge" aria-hidden="true"><Icon name="arrow-up-right" size={16} /></span>
+              </summary>
+              <div class="svc-body">
+                <ul class="svc-tags">{s.points.map((pt) => <li>{pt}</li>)}</ul>
+                <p>{s.text}</p>
+              </div>
+            </details>
           ))
         }
       </div>
     </div>
   </section>
 
-  {/* Featured work */}
-  <section class="section work-band">
+  {/* About */}
+  <section class="section about">
+    <div class="container about-grid">
+      <div class="about-card reveal" aria-hidden={site.photo ? undefined : 'true'}>
+        <div class:list={['arch', 'small', { 'has-photo': site.photo }]} data-photo-slot data-photo={site.photo} data-fallback={leaf}>
+          <img src={site.photo || leaf} alt={site.photo ? photoAlt : ''} width="340" height="440" loading="lazy" />
+        </div>
+        <span class="float-chip one">Websites</span>
+        <span class="float-chip two">Systems</span>
+      </div>
+      <div class="about-text reveal">
+        <p class="eyebrow">About Me</p>
+        <h2>Who is <span class="hl">Trutech Business?</span></h2>
+        <p class="lead">{site.about.paragraphs[0]} Everything I build starts from a real need: what problem it solves, how people will use it, and how it will be run.</p>
+        <div class="stats">
+          {
+            site.about.stats.map((s) => (
+              <div class="stat">
+                <span class="stat-v">{s.value}+</span>
+                <span class="muted">{s.label}</span>
+              </div>
+            ))
+          }
+        </div>
+        <div class="about-actions">
+          <a class="btn btn-primary" href={base + 'about/'}>More about me <Icon name="arrow" /></a>
+          <a class="btn btn-ghost" href={base + 'contact/'}>Contact me</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* Selected work */}
+  <section class="section">
     <div class="container">
       <div class="section-head reveal">
         <div>
-          <p class="eyebrow">Selected work</p>
-          <h2>Systems, platforms and brands built for real needs.</h2>
+          <p class="eyebrow">Selected Work</p>
+          <h2>Systems, Platforms <span class="hl">&amp; Brands</span></h2>
         </div>
-        <a class="btn btn-ghost" href={base + 'work/'}>View all work <Icon name="arrow" /></a>
+        <a class="pill-link" href={base + 'work/'}><span>View all work</span><span class="pill-arrow"><Icon name="arrow" size={18} /></span></a>
       </div>
-      <div class="grid grid-3" data-featured data-fp={fingerprint(featured)} set:html={featured.map((p, i) => cardHTML(p, i, base)).join('')} />
-    </div>
-  </section>
-
-  {/* About teaser */}
-  <section class="section tint about">
-    <div class="container about-grid">
-      <div class="reveal">
-        <div class="avatar" data-photo-slot data-photo={site.photo} hidden={!site.photo}>
-          <img src={site.photo || undefined} alt={`Photo of ${site.owner || 'the founder of Trutech Business'}`} width="96" height="96" />
-        </div>
-        <p class="eyebrow">About</p>
-        <h2>One partner for your website, your system and your brand.</h2>
-        <p class="lead">{site.about.paragraphs[0]}</p>
-        <a class="btn btn-primary" href={base + 'about/'}>More about me <Icon name="arrow" /></a>
-      </div>
-      <div class="stats reveal">
-        {
-          site.about.stats.map((s) => (
-            <div class="stat">
-              <span class="display">{s.value}</span>
-              <span class="muted">{s.label}</span>
-            </div>
-          ))
-        }
-      </div>
+      <div class="grid grid-2" data-featured data-fp={fingerprint(featured)} set:html={featured.map((p, i) => cardHTML(p, i, base)).join('')} />
     </div>
   </section>
 
@@ -126,17 +165,17 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     <div class="container">
       <div class="section-head reveal">
         <div>
-          <p class="eyebrow">How I work</p>
-          <h2>From the first conversation to long after launch.</h2>
+          <p class="eyebrow">How I Work</p>
+          <h2>From the first conversation <span class="hl">to launch</span></h2>
         </div>
       </div>
       <ol class="grid grid-4 steps">
         {
           site.process.map((s, i) => (
-            <li class="reveal" style={`transition-delay:${i * 80}ms`}>
+            <li class:list={['step reveal', { on: i === 0 }]} style={`transition-delay:${i * 80}ms`}>
               <span class="num">{String(i + 1).padStart(2, '0')}</span>
               <h3>{s.title}</h3>
-              <p class="muted">{s.text}</p>
+              <p>{s.text}</p>
             </li>
           ))
         }
@@ -166,8 +205,8 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
   <section class="cta-band">
     <div class="container cta reveal">
       <h2>Have an idea? Let’s turn it into reality.</h2>
-      <p class="lead">Tell me what you need, whether it’s a website, a system, a brand or help with your devices, and I’ll get back to you.</p>
-      <a class="btn btn-light" href={base + 'contact/'}>Start a project <Icon name="arrow" /></a>
+      <p>Tell me what you need, whether it’s a website, a system, a brand or help with your devices, and I’ll get back to you within a day.</p>
+      <a class="btn cta-btn" href={base + 'contact/'}>Start a project <span class="cta-arrow"><Icon name="arrow" size={18} /></span></a>
     </div>
   </section>
 </Base>
@@ -177,277 +216,397 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
   import { liveProfilePhoto } from '../scripts/profile';
   liveFeatured(document.querySelector<HTMLElement>('[data-featured]')!).catch(() => {});
   liveProfilePhoto().catch(() => {});
-
-  const reel = document.querySelector<HTMLVideoElement>('.reel');
-  const toggle = document.querySelector<HTMLButtonElement>('.reel-toggle');
-  if (reel && toggle) {
-    const icon = toggle.querySelector('span')!;
-    const sync = () => {
-      const paused = reel.paused;
-      icon.className = paused ? 'i-play' : 'i-pause';
-      toggle.setAttribute('aria-label', paused ? 'Play background video' : 'Pause background video');
-      toggle.setAttribute('aria-pressed', String(paused));
-    };
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      reel.removeAttribute('autoplay');
-      reel.pause();
-    }
-    reel.addEventListener('play', sync);
-    reel.addEventListener('pause', sync);
-    toggle.addEventListener('click', () => (reel.paused ? reel.play() : reel.pause()));
-    sync();
-  }
 </script>
 
 <style>
-  /* Hero */
+  /* ---- Hero ---- */
   .hero {
     position: relative;
-    min-height: 100svh;
-    display: flex;
-    align-items: center;
-    color: var(--cream-50);
-    padding-block: 120px 96px;
     overflow: hidden;
+    padding-top: clamp(40px, 6vw, 64px);
   }
-  .reel,
-  .shade {
-    position: absolute;
-    inset: 0;
+  .hero-inner {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    text-align: center;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 22px;
+    padding: 6px 16px 6px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .badge-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--amber);
+  }
+  h1 {
+    font-size: clamp(2.8rem, 7.4vw, 5.6rem);
+    margin-bottom: 14px;
+  }
+  .sub {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: clamp(1rem, 1.4vw, 1.15rem);
+    font-weight: 500;
+  }
+  .stage-row {
+    display: grid;
     width: 100%;
-    height: 100%;
+    margin-top: 24px;
+    align-items: end;
   }
-  .reel {
-    object-fit: cover;
-  }
-  /* Keeps the headline readable over every part of the video. */
-  .shade {
-    background:
-      linear-gradient(90deg, rgb(61 11 55 / 0.85) 0%, rgb(61 11 55 / 0.45) 50%, rgb(61 11 55 / 0.05) 100%),
-      linear-gradient(0deg, rgb(61 11 55 / 0.8) 0%, rgb(61 11 55 / 0) 35%);
-  }
-  /* On phones the text covers the whole video, so shade it evenly. */
-  @media (max-width: 768px) {
-    .shade {
-      background: linear-gradient(180deg, rgb(61 11 55 / 0.55) 0%, rgb(61 11 55 / 0.75) 60%, rgb(61 11 55 / 0.9) 100%);
+  @media (min-width: 1000px) {
+    .stage-row {
+      grid-template-columns: 1fr minmax(380px, 440px) 1fr;
+      gap: 24px;
     }
   }
-  .reel-toggle {
+  .stage {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    align-items: end;
+    min-height: clamp(380px, 52vw, 540px);
+    padding-bottom: 28px;
+  }
+  .watermark {
     position: absolute;
-    z-index: 2;
-    right: clamp(16px, 3vw, 32px);
-    bottom: 28px;
+    left: 50%;
+    top: 22%;
+    transform: translateX(-50%);
+    font: 700 clamp(6rem, 20vw, 16.5rem) / 1 var(--font-display);
+    letter-spacing: -0.04em;
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--border);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .disc {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: min(88%, 420px);
+    aspect-ratio: 1;
+    transform: translate(-50%, 18%);
+    border-radius: 999px;
+    background: var(--amber);
+  }
+  .arch {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(76%, 360px);
+    aspect-ratio: 19 / 25;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 999px 999px 0 0;
+    background: #242424; /* stays dark in both themes, so the leaf shows */
+  }
+  .arch img {
+    width: 42%;
+    height: auto;
+  }
+  .arch.has-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  /* The photo fades into the page at the bottom, as in the design. */
+  .stage::after {
+    content: '';
+    position: absolute;
+    inset: auto -40px 0;
+    height: 30%;
+    background: linear-gradient(transparent, var(--bg));
+    pointer-events: none;
+  }
+  .ctas {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+  .ctas .btn-ghost {
+    background: rgb(18 18 18 / 0.55);
+    backdrop-filter: blur(8px);
+  }
+  :global([data-theme='light']) .ctas .btn-ghost {
+    background: rgb(255 255 255 / 0.75);
+  }
+  .side {
+    display: grid;
+    gap: 28px;
+    padding-bottom: 60px;
+  }
+  .side.left {
+    justify-items: start;
+    text-align: left;
+  }
+  .side.right {
+    justify-items: end;
+    text-align: right;
+  }
+  .follow p {
+    margin: 0 0 12px;
+    font-weight: 500;
+  }
+  .socials {
+    display: flex;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .socials a {
     display: grid;
     place-items: center;
     width: 44px;
     height: 44px;
-    border-radius: 50%;
-    border: 1px solid rgb(255 221 0 / 0.4);
-    background: rgb(61 11 55 / 0.5);
-    backdrop-filter: blur(10px);
-    color: var(--cream-50);
-    cursor: pointer;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition:
+      border-color 0.2s,
+      color 0.2s;
   }
-  .reel-toggle:hover {
-    background: rgb(92 26 84 / 0.7);
+  .socials a:hover {
+    border-color: var(--amber);
+    color: var(--accent);
   }
-  .reel-toggle:focus-visible {
-    outline: 2px solid var(--gold-300);
-    outline-offset: 3px;
+  .proof p {
+    margin: 0;
+    font-size: 0.9rem;
   }
-  .i-pause,
-  .i-play {
+  .proof-title {
+    font: 700 1.25rem var(--font-display) !important;
+    color: var(--accent);
+    margin-bottom: 4px !important;
+  }
+  .quote {
+    margin: 0;
+    max-width: 260px;
+  }
+  .qmark {
     display: block;
-    width: 12px;
-    height: 14px;
+    font: 700 3.5rem/0.8 var(--font-display);
+    color: var(--amber);
   }
-  .i-pause {
-    border-inline: 4px solid currentColor;
+  .quote p {
+    margin: 6px 0 0;
   }
-  .i-play {
-    width: 0;
-    height: 0;
-    margin-left: 3px;
-    border-block: 7px solid transparent;
-    border-left: 12px solid currentColor;
+  .skills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    max-width: 260px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
-  @media (prefers-reduced-motion: reduce) {
-    .reel-toggle {
+  .skill {
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .skill.on {
+    border-color: var(--amber);
+    background: var(--amber);
+    color: var(--ink);
+  }
+  .available {
+    position: absolute;
+    top: 30px;
+    right: 0;
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .available .arrow-badge {
+    width: 56px;
+    height: 56px;
+    box-shadow:
+      0 0 0 14px var(--surface),
+      0 0 0 15px var(--border);
+  }
+  .available:hover .arrow-badge {
+    transform: rotate(45deg);
+  }
+  @media (max-width: 999px) {
+    .stage-row {
+      gap: 28px;
+    }
+    .stage {
+      order: -1;
+    }
+    .side,
+    .side.left,
+    .side.right {
+      justify-items: center;
+      text-align: center;
+      padding-bottom: 0;
+    }
+    .skills {
+      justify-content: center;
+      max-width: none;
+    }
+    .quote {
+      max-width: 34ch;
+    }
+    .available {
       display: none;
     }
   }
-  .hero-inner {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    gap: 48px;
-    align-items: end;
-  }
-  @media (min-width: 1024px) {
-    .hero-inner {
-      grid-template-columns: 1fr 320px;
-    }
-  }
-  .pill {
+
+  /* ---- Pill link ("View all") ---- */
+  .pill-link {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 16px;
-    margin-bottom: 28px;
+    gap: 6px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  .pill-link > span:first-child {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 20px;
     border-radius: 999px;
-    border: 1px solid rgb(255 221 0 / 0.28);
-    background: rgb(255 221 0 / 0.1);
-    backdrop-filter: blur(10px);
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--gold-300);
+    background: var(--amber);
+    color: var(--ink);
   }
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--gold-300);
-    box-shadow: 0 0 0 0 rgb(255 221 0 / 0.6);
-    animation: pulse 2.4s infinite;
+  .pill-arrow {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    background: var(--text);
+    color: var(--bg);
+    transition: transform 0.25s var(--ease);
   }
-  @keyframes pulse {
-    70% {
-      box-shadow: 0 0 0 10px rgb(255 221 0 / 0);
+  .pill-link:hover .pill-arrow {
+    transform: translateX(3px);
+  }
+
+  /* ---- Services accordion ---- */
+  .svc-list {
+    display: grid;
+    gap: 12px;
+  }
+  .svc {
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition:
+      background-color 0.25s,
+      border-color 0.25s;
+  }
+  .svc summary {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 72px;
+    padding: 14px 18px 14px 24px;
+    cursor: pointer;
+    list-style: none;
+  }
+  .svc summary::-webkit-details-marker {
+    display: none;
+  }
+  @media (min-width: 900px) {
+    .svc summary {
+      grid-template-columns: 200px 1fr auto;
+      padding-left: 32px;
     }
-    100% {
-      box-shadow: 0 0 0 0 rgb(255 221 0 / 0);
+    .svc-body {
+      padding-left: 232px !important;
     }
   }
-  h1 {
-    font-size: clamp(3rem, 9vw, 7.4rem);
-    max-width: 11ch;
-    margin-bottom: 0.3em;
+  .svc-n {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-muted);
   }
-  h1 em {
-    font-style: normal;
-    color: var(--gold-300);
+  .svc-title {
+    font: 600 clamp(1.1rem, 2vw, 1.4rem) / 1.25 var(--font-display);
   }
-  .sub {
-    max-width: 58ch;
-    font-size: clamp(1.02rem, 1.5vw, 1.2rem);
-    color: #ead9e6;
-    margin-bottom: 36px;
+  .svc summary:hover .svc-title {
+    color: var(--accent);
   }
-  .actions {
+  .svc-body {
+    padding: 0 24px 26px 92px;
+  }
+  .svc-body p {
+    margin: 14px 0 0;
+    max-width: 62ch;
+  }
+  .svc-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 14px;
-  }
-  .hero .btn-ghost {
-    color: var(--cream-50);
-    border-color: rgb(255 221 0 / 0.5);
-  }
-  .now {
-    padding: 22px;
-    border-radius: var(--radius);
-    border: 1px solid rgb(255 221 0 / 0.22);
-    background: rgb(61 11 55 / 0.45);
-    backdrop-filter: blur(14px);
-  }
-  .now-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--gold-300);
-    margin-bottom: 10px;
-  }
-  .now ul {
-    list-style: none;
+    gap: 8px;
     margin: 0;
     padding: 0;
-    display: grid;
-    gap: 6px;
+    list-style: none;
   }
-  .now a {
-    display: grid;
-    gap: 2px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    text-decoration: none;
-    transition: background-color 0.2s;
-  }
-  .now a:hover {
-    background: rgb(255 221 0 / 0.1);
-  }
-  .now-title {
+  .svc-tags li {
+    padding: 5px 14px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    font-size: 0.8rem;
     font-weight: 600;
   }
-  .now-meta {
-    font-size: 0.82rem;
-    color: #e3cfe0;
+  /* The open service turns amber with dark text. */
+  .svc[open] {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: var(--ink);
   }
-  .scroll {
-    position: absolute;
-    left: 50%;
-    bottom: 26px;
-    z-index: 1;
-    width: 28px;
-    height: 44px;
-    margin-left: -14px;
-    border: 1.5px solid rgb(255 221 0 / 0.5);
-    border-radius: 999px;
+  .svc[open] .svc-n,
+  .svc[open] summary:hover .svc-title {
+    color: var(--ink);
   }
-  /* A 46px-wide tap area around the slim scroll cue. */
-  .scroll::after {
-    content: '';
-    position: absolute;
-    inset: -2px -10px;
+  .svc[open] .arrow-badge {
+    background: var(--ink);
+    color: var(--white);
+    transform: rotate(90deg);
   }
-  .scroll span {
-    position: absolute;
-    left: 50%;
-    top: 9px;
-    width: 4px;
-    height: 8px;
-    margin-left: -2px;
-    border-radius: 2px;
-    background: var(--gold-300);
-    animation: wheel 1.8s infinite;
-  }
-  @keyframes wheel {
-    to {
-      transform: translateY(14px);
-      opacity: 0;
+  @media (max-width: 600px) {
+    .svc summary {
+      grid-template-columns: 34px 1fr auto;
+      padding-left: 18px;
+    }
+    .svc-body {
+      padding: 0 18px 22px;
     }
   }
 
-  /* Services */
-  .service {
-    transition:
-      transform 0.3s var(--ease),
-      box-shadow 0.3s var(--ease),
-      border-color 0.3s;
-  }
-  .service:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow);
-    border-color: var(--gold-300);
-  }
-  .icon {
-    display: inline-grid;
-    place-items: center;
-    width: 52px;
-    height: 52px;
-    margin-bottom: 20px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, var(--purple-900), var(--purple-700));
-    color: var(--gold-300);
-  }
-  .service p {
-    margin: 0;
-  }
-
-  .work-band {
-    background: linear-gradient(180deg, var(--bg), var(--surface-2));
-  }
-
-  /* About */
+  /* ---- About ---- */
   .about-grid {
     display: grid;
     gap: 48px;
@@ -455,75 +614,111 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
   }
   @media (min-width: 900px) {
     .about-grid {
-      grid-template-columns: 1.3fr 1fr;
+      grid-template-columns: minmax(320px, 460px) 1fr;
+      gap: 72px;
     }
   }
-  .avatar {
-    width: 96px;
-    height: 96px;
-    margin-bottom: 20px;
-    border-radius: 50%;
+  .about-card {
+    position: relative;
+    aspect-ratio: 8 / 9;
+    border-radius: var(--radius-lg);
+    background: var(--amber);
     overflow: hidden;
-    border: 3px solid var(--surface);
-    box-shadow: var(--shadow);
   }
-  .avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+  .arch.small {
+    width: 72%;
   }
-  .about .lead {
-    margin-bottom: 32px;
+  .float-chip {
+    position: absolute;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--white);
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .float-chip.one {
+    left: 6%;
+    top: 62%;
+    transform: rotate(8deg);
+  }
+  .float-chip.two {
+    right: 6%;
+    top: 76%;
+    transform: rotate(-8deg);
+  }
+  .about-text .lead {
+    max-width: 62ch;
   }
   .stats {
     display: grid;
-    gap: 16px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 28px 0;
   }
   .stat {
-    display: flex;
-    align-items: baseline;
-    gap: 18px;
-    padding: 22px 26px;
-    border-radius: var(--radius);
+    display: grid;
+    gap: 2px;
+    padding: 18px 20px;
+    border-radius: 18px;
     border: 1px solid var(--border);
     background: var(--surface);
-    box-shadow: var(--shadow);
   }
-  .stat .display {
-    font-size: clamp(2.6rem, 5vw, 3.6rem);
-    line-height: 1.15;
-    margin: 0;
-    color: var(--accent-strong);
-    min-width: 1.4ch;
+  .stat .muted {
+    font-size: 0.85rem;
+  }
+  .stat-v {
+    font: 700 clamp(1.8rem, 3vw, 2.3rem) / 1.25 var(--font-display);
+    color: var(--accent);
+  }
+  .about-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  @media (max-width: 520px) {
+    .stats {
+      gap: 8px;
+    }
+    .stat {
+      padding: 14px 12px;
+    }
+    .stat .muted {
+      font-size: 0.75rem;
+    }
   }
 
-  /* Process */
+  /* ---- Process ---- */
   .steps {
     list-style: none;
     margin: 0;
     padding: 0;
-    counter-reset: step;
   }
-  .steps li {
-    padding-top: 22px;
-    border-top: 2px solid var(--border);
-    position: relative;
+  .step {
+    padding: 26px;
+    border-radius: 22px;
+    border: 1px solid var(--border);
+    background: var(--surface);
   }
-  .steps li::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: 0;
-    width: 48px;
-    height: 2px;
-    background: var(--gold-500);
+  .step p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.95rem;
   }
   .num {
     display: block;
-    font-family: var(--font-display);
-    font-size: 2rem;
+    font: 700 2.6rem/1.2 var(--font-display);
     color: var(--accent);
-    margin-bottom: 10px;
+    margin-bottom: 18px;
+  }
+  .step.on {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: var(--ink);
+  }
+  .step.on .num,
+  .step.on p {
+    color: var(--ink);
   }
 
   blockquote {
@@ -531,24 +726,45 @@ const building = projects.filter((p) => p.status === 'In development').slice(0, 
     font-size: 1.05rem;
   }
 
-  /* CTA */
+  /* ---- CTA ---- */
   .cta-band {
-    padding: 0 var(--gutter) clamp(72px, 10vw, 120px);
+    padding-bottom: clamp(72px, 10vw, 120px);
   }
   .cta {
+    display: grid;
+    justify-items: center;
     text-align: center;
-    padding: clamp(48px, 8vw, 96px) clamp(20px, 6vw, 80px);
-    border-radius: var(--radius-lg);
-    border-top: 4px solid var(--gold-300);
-    color: var(--cream-50);
-    background:
-      radial-gradient(80% 120% at 100% 100%, rgb(155 42 138 / 0.45), transparent 60%),
-      radial-gradient(70% 110% at 0% 0%, rgb(122 27 109 / 0.6), transparent 60%),
-      var(--purple-900);
+    padding: clamp(44px, 7vw, 80px) clamp(20px, 6vw, 72px);
+    border-radius: 32px;
+    background: var(--amber);
+    color: var(--ink);
   }
-  .cta .lead {
-    color: #ead9e6;
-    margin-inline: auto;
-    margin-bottom: 32px;
+  .cta h2 {
+    max-width: 18ch;
+  }
+  .cta p {
+    max-width: 56ch;
+    margin-bottom: 28px;
+    font-weight: 500;
+  }
+  .cta-btn {
+    padding-right: 5px;
+    background: var(--ink);
+    color: var(--white);
+  }
+  .cta-btn:hover {
+    background: #2a2a2a;
+  }
+  .cta-arrow {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: var(--amber);
+    color: var(--ink);
+  }
+  .cta-btn:hover svg {
+    transform: translateX(2px);
   }
 </style>

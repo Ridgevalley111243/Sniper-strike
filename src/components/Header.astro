@@ -2,48 +2,49 @@
 import Icon from './Icon.astro';
 import Logo from './Logo.astro';
 
-interface Props {
-  /** Header sits on the dark hero (home) rather than the light page. */
-  overDark?: boolean;
-}
-const { overDark = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const path = Astro.url.pathname.replace(base, '/');
 const links = [
-  { href: 'work/', label: 'Work' },
+  { href: '', label: 'Home' },
   { href: 'services/', label: 'Services' },
+  { href: 'work/', label: 'Work' },
   { href: 'about/', label: 'About' },
+  { href: 'contact/', label: 'Contact' },
 ];
-const current = (href: string) => path.startsWith('/' + href);
+const current = (href: string) => (href ? path.startsWith('/' + href) : path === '/');
 ---
-<header class:list={['site-header', { 'over-dark': overDark }]} data-header>
-  <div class="container bar">
-    <a href={base} class="home" aria-label="Trutech Business home">
-      <Logo tone={overDark ? 'light' : 'dark'} />
-    </a>
-    <nav aria-label="Main">
-      <ul id="nav-links" data-nav>
-        {
-          links.map((l) => (
-            <li>
-              <a href={base + l.href} aria-current={current(l.href) ? 'page' : undefined}>
-                {l.label}
-              </a>
-            </li>
-          ))
-        }
-        <li><a class="btn btn-primary cta" href={base + 'contact/'}>Start a project</a></li>
-      </ul>
-      <button class="theme" type="button" aria-pressed="false" data-theme-toggle>
-        <span class="to-dark"><Icon name="moon" size={20} /></span>
-        <span class="to-light"><Icon name="sun" size={20} /></span>
-        <span class="sr-only">Dark mode</span>
-      </button>
-      <button class="menu" type="button" aria-expanded="false" aria-controls="nav-links" data-menu>
-        <span class="open"><Icon name="menu" label="Open menu" /></span>
-        <span class="shut"><Icon name="close" label="Close menu" /></span>
-      </button>
-    </nav>
+<header class="site-header" data-header>
+  <div class="container">
+    <div class="bar">
+      <a href={base} class="home" aria-label="Trutech Business home">
+        <Logo />
+      </a>
+      <nav aria-label="Main">
+        <ul id="nav-links" data-nav>
+          {
+            links.map((l) => (
+              <li>
+                <a href={base + l.href} aria-current={current(l.href) ? 'page' : undefined}>
+                  {l.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+      <div class="actions">
+        <button class="icon-btn theme" type="button" aria-pressed="false" data-theme-toggle>
+          <span class="to-light"><Icon name="sun" size={18} /></span>
+          <span class="to-dark"><Icon name="moon" size={18} /></span>
+          <span class="sr-only">Light mode</span>
+        </button>
+        <a class="btn btn-light talk" href={base + 'contact/'}>Let’s Talk</a>
+        <button class="icon-btn menu" type="button" aria-expanded="false" aria-controls="nav-links" data-menu>
+          <span class="open"><Icon name="menu" size={20} label="Open menu" /></span>
+          <span class="shut"><Icon name="close" size={20} label="Close menu" /></span>
+        </button>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -58,19 +59,18 @@ const current = (href: string) => path.startsWith('/' + href);
   header.querySelectorAll('[data-nav] a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
   document.addEventListener('keydown', (e) => e.key === 'Escape' && setOpen(false));
 
-  // Theme toggle. The theme is applied before paint by the script in Base.astro.
+  // Theme toggle (dark by default). The theme is applied before paint by Base.astro.
   const root = document.documentElement;
   const toggle = header.querySelector<HTMLButtonElement>('[data-theme-toggle]')!;
-  const syncToggle = () => toggle.setAttribute('aria-pressed', String(root.dataset.theme === 'dark'));
+  const syncToggle = () => toggle.setAttribute('aria-pressed', String(root.dataset.theme === 'light'));
   toggle.addEventListener('click', () => {
-    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    const next = root.dataset.theme === 'light' ? 'dark' : 'light';
     root.dataset.theme = next;
     try {
       localStorage.setItem('theme', next);
     } catch {}
     syncToggle();
   });
-  new MutationObserver(syncToggle).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
   syncToggle();
 
   const onScroll = () => header.classList.toggle('is-scrolled', window.scrollY > 8);
@@ -79,144 +79,127 @@ const current = (href: string) => path.startsWith('/' + href);
 </script>
 
 <style>
+  /* Floating pill bar that stays at the top while scrolling. */
   .site-header {
     position: sticky;
     top: 0;
     z-index: 50;
-    background: var(--header-bg);
-    backdrop-filter: saturate(1.4) blur(14px);
-    -webkit-backdrop-filter: saturate(1.4) blur(14px);
-    border-bottom: 1px solid transparent;
-    transition:
-      background-color 0.25s,
-      border-color 0.25s;
-  }
-  .site-header.is-scrolled {
-    border-bottom-color: var(--border);
-  }
-  .over-dark {
-    position: absolute;
-    inset: 0 0 auto;
-    background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    color: var(--white);
+    padding-top: 16px;
   }
   .bar {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 76px;
+    gap: 16px;
+    min-height: 64px;
+    padding: 10px 10px 10px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--header-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transition: box-shadow 0.25s;
+  }
+  .is-scrolled .bar {
+    box-shadow: var(--shadow);
   }
   .home {
-    text-decoration: none;
     display: inline-flex;
     align-items: center;
-    min-height: 48px;
+    min-height: 44px;
+    text-decoration: none;
   }
   ul {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     margin: 0;
     padding: 0;
     list-style: none;
   }
-  ul a:not(.btn) {
+  ul a {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
     padding: 0 14px;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 0.95rem;
     text-decoration: none;
     border-radius: 999px;
-    transition: background-color 0.2s;
+    transition: color 0.2s;
   }
-  ul a:not(.btn):hover {
-    background: rgb(255 221 0 / 0.12);
-  }
+  ul a:hover,
   ul a[aria-current='page'] {
     color: var(--accent);
   }
-  .over-dark ul a[aria-current='page'] {
-    color: var(--gold-300);
-  }
-  .over-dark .cta {
-    background: var(--gold-300);
-    color: var(--purple-900);
-  }
-  .cta {
-    margin-left: 8px;
-  }
-  nav {
+  .actions {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
   }
-  .theme {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  .icon-btn {
+    display: inline-grid;
+    place-items: center;
     width: 44px;
     height: 44px;
-    margin-left: 6px;
     border: 0;
     border-radius: 999px;
     background: transparent;
     color: inherit;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition:
+      background-color 0.2s,
+      color 0.2s;
   }
-  .theme:hover {
-    background: rgb(255 221 0 / 0.16);
+  .icon-btn:hover {
+    color: var(--accent);
   }
-  .theme .to-light,
-  :global([data-theme='dark']) .theme .to-dark {
+  .theme .to-dark,
+  :global([data-theme='light']) .theme .to-light {
     display: none;
   }
-  :global([data-theme='dark']) .theme .to-light {
-    display: inline-flex;
+  :global([data-theme='light']) .theme .to-dark {
+    display: inline;
   }
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
+  :global([data-theme='light']) .talk {
+    background: var(--ink);
+    color: var(--white);
+  }
+  .talk {
+    min-height: 44px;
+    padding: 0 20px;
   }
   .menu {
     display: none;
-    width: 44px;
-    height: 44px;
-    border: 0;
-    border-radius: 12px;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
+    background: var(--amber);
+    color: var(--ink);
+  }
+  .menu:hover {
+    color: var(--ink);
+    background: var(--amber-hover);
   }
   .menu .shut {
     display: none;
   }
-  @media (max-width: 820px) {
+  @media (max-width: 900px) {
     .menu {
-      display: inline-flex;
+      display: inline-grid;
+    }
+    .talk {
+      display: none;
     }
     ul {
       display: none;
       position: absolute;
-      top: 76px;
-      left: var(--gutter);
-      right: var(--gutter);
+      top: calc(100% + 10px);
+      left: 0;
+      right: 0;
       flex-direction: column;
       align-items: stretch;
-      gap: 4px;
-      padding: 12px;
+      gap: 2px;
+      padding: 10px;
       background: var(--menu-bg);
-      color: var(--text);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow-lg);
@@ -230,17 +213,13 @@ const current = (href: string) => path.startsWith('/' + href);
     .is-open .menu .shut {
       display: inline;
     }
-    ul a:not(.btn) {
+    ul a {
       min-height: 48px;
+      padding: 0 16px;
+      font-size: 1.05rem;
     }
-    .cta,
-    .over-dark .cta {
-      margin: 6px 0 0;
-      background: var(--inverse-bg);
-      color: var(--inverse-text);
-    }
-    .over-dark ul a[aria-current='page'] {
-      color: var(--accent);
+    ul a[aria-current='page'] {
+      background: var(--surface-2);
     }
   }
 </style>

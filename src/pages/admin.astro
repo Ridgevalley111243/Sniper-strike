@@ -15,7 +15,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
     <section class="gate" data-view="login" hidden>
       <form class="card gate-card" data-login autocomplete="off">
-        <Logo tone="light" />
+        <Logo />
         <h1>Admin sign in</h1>
         <div class="field">
           <label for="l-email">Email</label>
@@ -33,7 +33,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
     <section class="gate" data-view="password" hidden>
       <form class="card gate-card" data-new-password novalidate>
-        <Logo tone="light" />
+        <Logo />
         <h1>Choose your password</h1>
         <p class="muted">You signed in with a temporary password. Choose your own to continue: at least 10 characters.</p>
         <div class="field">
@@ -52,7 +52,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     <div data-view="app" hidden>
       <header class="adm-top">
         <div class="container adm-bar">
-          <a href="#/projects" class="adm-brand" aria-label="Admin home"><Logo tone="light" /><span>Admin</span></a>
+          <a href="#/projects" class="adm-brand" aria-label="Admin home"><Logo /><span>Admin</span></a>
           <a class="adm-site" href={base} target="_blank" rel="noopener">View site ↗</a>
         </div>
         <nav class="container adm-nav" aria-label="Admin">

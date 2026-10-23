@@ -12,7 +12,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   <div class="shell">
     <header class="top">
       <div class="container bar">
-        <a href={base} aria-label="Trutech Business home"><Logo tone="light" /></a>
+        <a href={base} aria-label="Trutech Business home"><Logo /></a>
         <span class="secure"><Icon name="lock" size={16} /> Private link</span>
       </div>
     </header>
@@ -395,8 +395,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     background: var(--bg);
   }
   .top {
-    background: var(--purple-900);
-    color: var(--cream-50);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
   }
   .bar {
     display: flex;
@@ -444,8 +445,8 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   .badge {
     padding: 6px 14px;
     border-radius: 999px;
-    background: rgb(255 221 0 / 0.14);
-    color: var(--accent-strong);
+    background: var(--amber);
+    color: var(--ink);
     font-weight: 600;
     font-size: 0.85rem;
   }
@@ -495,7 +496,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   .files :global(.preview.icon) {
     gap: 10px;
     padding: 16px;
-    background: linear-gradient(160deg, var(--purple-900), var(--purple-700));
+    background: linear-gradient(135deg, #242424 0%, #402800 100%);
     color: var(--gold-300);
     font: 600 1.6rem var(--font-body);
   }
@@ -556,7 +557,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   }
   .files :global(.pdf) {
     min-height: 180px;
-    background: linear-gradient(160deg, var(--purple-900), var(--purple-700));
+    background: linear-gradient(135deg, #242424 0%, #402800 100%);
     color: var(--gold-300);
     font: 600 1.6rem var(--font-body);
   }
@@ -641,7 +642,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   }
   .choice:has(input:checked) {
     border-color: var(--accent);
-    background: rgb(255 221 0 / 0.08);
+    background: rgb(255 160 11 / 0.1);
   }
   .choice span {
     display: grid;
@@ -649,7 +650,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   .choice input {
     width: 20px;
     height: 20px;
-    accent-color: var(--purple-700);
+    accent-color: var(--amber);
   }
   .star-row {
     display: flex;
