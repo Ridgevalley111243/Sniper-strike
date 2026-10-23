@@ -691,6 +691,49 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     object-fit: cover;
     border: 1px solid var(--border);
   }
+  .adm .placer {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .adm .placer h3 {
+    font-size: 1.05rem;
+    margin: 0 0 4px;
+  }
+  .adm .placer-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: flex-start;
+    margin-top: 14px;
+  }
+  /* Same shape as the About card on the home page. */
+  .adm .placer-frame {
+    width: 220px;
+    aspect-ratio: 8 / 9;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--amber, #ffa00b);
+    cursor: grab;
+    touch-action: none;
+  }
+  .adm .placer-frame:active {
+    cursor: grabbing;
+  }
+  .adm .placer-frame img {
+    display: block;
+    user-select: none;
+    pointer-events: none;
+  }
+  .adm .placer-controls {
+    flex: 1 1 220px;
+    display: grid;
+    gap: 6px;
+  }
+  .adm .placer-controls input[type='range'] {
+    width: 100%;
+    accent-color: var(--amber, #ffa00b);
+  }
   .adm .avatar-empty {
     display: grid;
     place-items: center;

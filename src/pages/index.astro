@@ -3,7 +3,7 @@ import Icon from '../components/Icon.astro';
 import Text from '../components/Text.astro';
 import Base from '../layouts/Base.astro';
 import { projects } from '../lib/build-data';
-import { featuredOf, fingerprint } from '../lib/content';
+import { CENTRED, featuredOf, fingerprint, photoPosStyle } from '../lib/content';
 import { cardHTML } from '../lib/render';
 import { tl } from '../lib/t';
 import { site, whatsappLink } from '../site';
@@ -12,6 +12,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const featured = featuredOf(projects);
 const leaf = `${base}brand/leaf-light.png`;
 const aboutPhoto = site.aboutPhoto || site.photo;
+const aboutPos = photoPosStyle(site.aboutPhoto ? site.aboutPhotoPos : CENTRED);
 const photoAlt = `Photo of ${site.owner || 'the founder of Trutech Business'}`;
 const follow = [
   ...site.socials.map((s) => ({ href: s.url, label: `${s.label}: ${s.handle}`, icon: s.icon })),
@@ -56,7 +57,7 @@ const chips = tl('home.about.chips');
 
         <div class="stage">
           <span class="watermark" aria-hidden="true">TRUTECH</span>
-          <span class="disc" aria-hidden="true"></span>
+          <span class="glow" aria-hidden="true"></span>
           <div class:list={['arch', { 'has-photo': site.photo }]} data-photo-slot data-photo={site.photo} data-fallback={leaf}>
             <img src={site.photo || leaf} alt={site.photo ? photoAlt : ''} width="380" height="500" />
           </div>
@@ -118,8 +119,8 @@ const chips = tl('home.about.chips');
   <section class="section about">
     <div class="container about-grid">
       <div class="about-card reveal" aria-hidden={aboutPhoto ? undefined : 'true'}>
-        <div class:list={['arch', 'small', { 'has-photo': aboutPhoto }]} data-photo-slot="about" data-photo={aboutPhoto} data-fallback={leaf}>
-          <img src={aboutPhoto || leaf} alt={aboutPhoto ? photoAlt : ''} width="340" height="440" loading="lazy" />
+        <div class:list={['about-photo placed', { 'has-photo': aboutPhoto }]} data-photo-slot="about" data-photo={aboutPhoto} data-fallback={leaf} style={aboutPos}>
+          <img src={aboutPhoto || leaf} alt={aboutPhoto ? photoAlt : ''} width="460" height="518" loading="lazy" />
         </div>
         {chips.map((c, i) => <span class:list={['float-chip', i % 2 ? 'two' : 'one']}>{c}</span>)}
       </div>
@@ -266,7 +267,7 @@ const chips = tl('home.about.chips');
   }
   @media (min-width: 1000px) {
     .stage-row {
-      grid-template-columns: 1fr minmax(380px, 440px) 1fr;
+      grid-template-columns: 1fr minmax(420px, 540px) 1fr;
       gap: 24px;
     }
   }
@@ -275,7 +276,7 @@ const chips = tl('home.about.chips');
     display: grid;
     justify-items: center;
     align-items: end;
-    min-height: clamp(380px, 52vw, 540px);
+    min-height: clamp(440px, 62vw, 660px);
     padding-bottom: 28px;
   }
   .watermark {
@@ -291,25 +292,34 @@ const chips = tl('home.about.chips');
     user-select: none;
     white-space: nowrap;
   }
-  .disc {
+  /* A soft amber light behind the photo, with no hard edge, so the photo
+     stands out from the page. */
+  .glow {
     position: absolute;
-    bottom: 0;
+    bottom: 4%;
     left: 50%;
-    width: min(88%, 420px);
+    width: min(120%, 620px);
     aspect-ratio: 1;
-    transform: translate(-50%, 18%);
+    transform: translateX(-50%);
     border-radius: 999px;
-    background: var(--amber);
+    background: radial-gradient(
+      closest-side,
+      color-mix(in srgb, var(--amber) 55%, transparent),
+      color-mix(in srgb, var(--amber) 22%, transparent) 55%,
+      transparent
+    );
+    filter: blur(24px);
+    pointer-events: none;
   }
-  /* The photo stands straight on the amber disc, with no frame, like the
-     cut-out portrait in the design. A photo with a transparent background
-     looks best; without a photo the leaf sits on the disc. */
+  /* The photo stands straight in the glow, with no frame, like the cut-out
+     portrait in the design. A photo with a transparent background looks
+     best; without a photo the leaf stands there. */
   .arch {
     position: absolute;
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: min(84%, 400px);
+    width: min(100%, 500px);
     aspect-ratio: 4 / 5;
     display: flex;
     align-items: center;
@@ -631,8 +641,17 @@ const chips = tl('home.about.chips');
     background: var(--amber);
     overflow: hidden;
   }
-  .arch.small {
-    width: 82%;
+  /* The About photo fills the card, placed as set in the admin. Without a
+     photo the leaf sits in the middle of the card. */
+  .about-photo {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+  }
+  .about-photo:not(.has-photo) img {
+    width: 34%;
+    height: auto;
   }
   .float-chip {
     position: absolute;
