@@ -127,6 +127,11 @@ async function optimiseImage(file: File): Promise<{ blob: Blob; type: string; ex
   bitmap.close();
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/webp', 0.84));
   if (blob && blob.type === 'image/webp') return { blob, type: 'image/webp', ext: 'webp' };
+  // No WebP here: keep PNGs as PNG so a transparent background stays transparent.
+  if (file.type === 'image/png') {
+    const png = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'));
+    if (png) return { blob: png, type: 'image/png', ext: 'png' };
+  }
   const jpeg = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', 0.86));
   if (!jpeg) throw new Error(`“${file.name}” couldn’t be converted.`);
   return { blob: jpeg, type: 'image/jpeg', ext: 'jpg' };
@@ -779,7 +784,7 @@ async function settingsForm() {
   main().innerHTML = `
     <div class="head"><div><h1>Settings</h1><p class="hint">Shown on the Contact page, the footer and the About page. Changes appear on the site within about 15 minutes.</p></div></div>
     <section class="card panel"><h2>Profile photo</h2>
-      <p class="hint">Shown on the About page and the home page. It changes on the site as soon as you upload it.</p>
+      <p class="hint">Shown on the home page and the About page. It changes on the site as soon as you upload it. For the look in the design, use a photo of you with the background removed (a PNG with a transparent background, for example from the Background Remover in Canva).</p>
       <div class="profile" data-photo></div>
       <div class="progress" data-progress hidden><span data-progress-text></span><progress max="1" value="0"></progress></div>
     </section>
