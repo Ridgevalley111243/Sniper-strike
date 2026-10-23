@@ -300,27 +300,34 @@ const chips = tl('home.about.chips');
     border-radius: 999px;
     background: var(--amber);
   }
+  /* The photo stands straight on the amber disc, with no frame, like the
+     cut-out portrait in the design. A photo with a transparent background
+     looks best; without a photo the leaf sits on the disc. */
   .arch {
     position: absolute;
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: min(76%, 360px);
-    aspect-ratio: 19 / 25;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    border-radius: 999px 999px 0 0;
-    background: #242424; /* stays dark in both themes, so the leaf shows */
+    width: min(84%, 400px);
+    aspect-ratio: 4 / 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .arch img {
     width: 42%;
     height: auto;
+    margin-top: 20%;
+  }
+  .arch.has-photo {
+    align-items: flex-end;
   }
   .arch.has-photo img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    margin: 0;
+    object-fit: contain;
+    object-position: center bottom;
   }
   /* The photo fades into the page at the bottom, as in the design. */
   .stage::after {
@@ -624,7 +631,7 @@ const chips = tl('home.about.chips');
     overflow: hidden;
   }
   .arch.small {
-    width: 72%;
+    width: 82%;
   }
   .float-chip {
     position: absolute;
