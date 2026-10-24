@@ -27,12 +27,12 @@ const chips = tl('home.about.chips');
   {/* Hero */}
   <section class="hero">
     <div class="container hero-inner">
-      <p class="badge"><span class="badge-dot" aria-hidden="true"></span><Text k="home.badge" /></p>
-      <Text as="h1" k="home.title" />
-      <Text as="p" class="sub" k="home.sub" />
+      <p class="badge" data-intro="line"><span class="badge-dot" aria-hidden="true"></span><Text k="home.badge" /></p>
+      <Text as="h1" k="home.title" data-intro="line" />
+      <Text as="p" class="sub" k="home.sub" data-intro="line" />
 
       <div class="stage-row">
-        <div class="side left">
+        <div class="side left" data-intro="left">
           {
             follow.length > 0 && (
               <div class="follow">
@@ -57,9 +57,9 @@ const chips = tl('home.about.chips');
 
         <div class="stage">
           <span class="watermark" aria-hidden="true">TRUTECH</span>
-          <span class="glow" aria-hidden="true"></span>
+          <span class="glow" aria-hidden="true" data-intro="photo"></span>
           <div class:list={['arch', { 'has-photo': site.photo }]} data-photo-slot data-photo={site.photo} data-fallback={leaf}>
-            <img src={site.photo || leaf} alt={site.photo ? photoAlt : ''} width="380" height="500" />
+            <span class="lift"><img src={site.photo || leaf} alt={site.photo ? photoAlt : ''} width="380" height="500" data-intro="photo" /></span>
           </div>
           <div class="ctas">
             <a class="btn btn-primary" href={base + 'work/'}><Text k="home.ctaWork" /> <Icon name="arrow" /></a>
@@ -67,7 +67,7 @@ const chips = tl('home.about.chips');
           </div>
         </div>
 
-        <div class="side right">
+        <div class="side right" data-intro="right">
           <blockquote class="quote">
             <span class="qmark" aria-hidden="true">“</span>
             <Text as="p" class="muted" k="home.quote" />
@@ -122,7 +122,7 @@ const chips = tl('home.about.chips');
         <div class:list={['about-photo placed', { 'has-photo': aboutPhoto }]} data-photo-slot="about" data-photo={aboutPhoto} data-fallback={leaf} style={aboutPos}>
           <img src={aboutPhoto || leaf} alt={aboutPhoto ? photoAlt : ''} width="460" height="518" loading="lazy" />
         </div>
-        {chips.map((c, i) => <span class:list={['float-chip', i % 2 ? 'two' : 'one']}>{c}</span>)}
+        {chips.map((c, i) => <span class:list={['float-chip', i % 2 ? 'two' : 'one']} data-intro="chip">{c}</span>)}
       </div>
       <div class="about-text reveal">
         <Text as="p" class="eyebrow" k="home.about.label" />
@@ -213,9 +213,13 @@ const chips = tl('home.about.chips');
 
 <script>
   import { liveFeatured } from '../scripts/live';
+  import { heroPhoto, homeMotion } from '../scripts/motion';
   import { liveProfilePhoto } from '../scripts/profile';
   liveFeatured(document.querySelector<HTMLElement>('[data-featured]')!).catch(() => {});
-  liveProfilePhoto().catch(() => {});
+  homeMotion();
+  liveProfilePhoto()
+    .catch(() => {})
+    .finally(heroPhoto);
 </script>
 
 <style>
@@ -332,6 +336,14 @@ const chips = tl('home.about.chips');
   }
   .arch.has-photo {
     align-items: flex-end;
+  }
+  /* Moves the photo on scroll (src/scripts/motion.ts). */
+  .lift {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: inherit;
+    justify-content: center;
   }
   .arch.has-photo img {
     width: 100%;

@@ -1,0 +1,91 @@
+// Home page motion (Framer Motion's DOM API; the site has no React).
+//
+// Elements marked data-intro start hidden from CSS (global.css, only when
+// motion is allowed) and are brought in here. If this script never runs, a
+// CSS fallback shows them after a moment. With reduced motion nothing is
+// hidden and nothing here runs.
+import { animate, inView, scroll, stagger } from 'framer-motion/dom';
+
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ease = [0.22, 1, 0.36, 1] as const;
+const all = <T extends Element = HTMLElement>(sel: string, root: ParentNode = document) => [...root.querySelectorAll<T>(sel)];
+const done = (els: Element[]) => els.forEach((el) => el.classList.add('intro-done'));
+
+/** Badge, title and text rise in one after another; the sides slide in. */
+function heroIntro() {
+  const lines = all('.hero [data-intro="line"]');
+  const left = all('.hero [data-intro="left"]');
+  const right = all('.hero [data-intro="right"]');
+  const pills = all('.hero .skill');
+  done([...lines, ...left, ...right]);
+  animate(lines, { opacity: [0, 1], y: [22, 0] }, { duration: 0.6, ease, delay: stagger(0.09) });
+  animate(left, { opacity: [0, 1], x: [-28, 0] }, { duration: 0.7, ease, delay: 0.35 });
+  animate(right, { opacity: [0, 1], x: [28, 0] }, { duration: 0.7, ease, delay: 0.35 });
+  animate(pills, { opacity: [0, 1], scale: [0.8, 1] }, { type: 'spring', stiffness: 380, damping: 22, delay: stagger(0.05, { startDelay: 0.55 }) });
+}
+
+/** The photo rises and settles once the current photo is known (profile.ts). */
+export function heroPhoto() {
+  const img = document.querySelector<HTMLElement>('.stage .arch img');
+  const glow = document.querySelector<HTMLElement>('.stage .glow');
+  const lift = document.querySelector<HTMLElement>('.stage .lift');
+  if (calm || !img || !glow || !lift) return;
+  done([img, glow]);
+  animate(img, { opacity: [0, 1], y: [60, 0], scale: [0.94, 1] }, { type: 'spring', stiffness: 120, damping: 18, mass: 0.9 });
+  animate(glow, { opacity: [0, 1] }, { duration: 1.2, ease }).then(() => {
+    // The glow breathes gently, only while the hero is on screen.
+    const breathe = animate(glow, { opacity: [1, 0.7, 1] }, { duration: 5, ease: 'easeInOut', repeat: Infinity });
+    breathe.pause();
+    inView(glow, () => {
+      breathe.play();
+      return () => breathe.pause();
+    });
+  });
+  // While the hero scrolls away, the photo drifts slower than the page.
+  const hero = document.querySelector<HTMLElement>('.hero')!;
+  scroll(animate(lift, { y: [0, 160] }, { ease: 'linear' }), { target: hero, offset: ['start start', 'end start'] });
+}
+
+/** Stat numbers count up when they come into view. */
+function countUp() {
+  all('.stat-v [data-t]').forEach((el) => {
+    const start = el.textContent?.trim() ?? '';
+    if (!/^\d+$/.test(start) || el.getBoundingClientRect().top < innerHeight) return;
+    el.textContent = '0';
+    inView(
+      el,
+      () => {
+        // Newer wording from the admin (texts.ts) may have arrived meanwhile.
+        const now = el.textContent?.trim();
+        const target = Number(now && now !== '0' ? now : start);
+        if (!Number.isInteger(target) || target <= 0) return;
+        animate(0, target, { duration: 1.1, ease, onUpdate: (v) => (el.textContent = String(Math.round(v))) });
+      },
+      { amount: 0.8 },
+    );
+  });
+}
+
+/** The chips on the About card pop in, keeping their tilt. */
+function chips() {
+  const list = all('.about-card .float-chip');
+  if (!list.length) return;
+  done(list);
+  inView(
+    '.about-card',
+    () => {
+      list.forEach((chip, i) => {
+        const tilt = chip.classList.contains('two') ? -8 : 8;
+        animate(chip, { opacity: [0, 1], scale: [0.4, 1], rotate: [tilt * -2, tilt] }, { type: 'spring', stiffness: 260, damping: 14, delay: 0.3 + i * 0.15 });
+      });
+    },
+    { amount: 0.4 },
+  );
+}
+
+export function homeMotion() {
+  if (calm) return;
+  heroIntro();
+  countUp();
+  chips();
+}
