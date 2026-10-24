@@ -463,6 +463,21 @@ p {
   color: var(--accent);
 }
 
+/* ---- Home page motion (src/scripts/motion.ts) ----
+   Elements marked data-intro wait hidden for the script, which brings them in.
+   If it never runs, they appear anyway after a moment. */
+@media (prefers-reduced-motion: no-preference) {
+  .js [data-intro]:not(.intro-done) {
+    opacity: 0;
+    animation: intro-fallback 0.4s 3s forwards;
+  }
+}
+@keyframes intro-fallback {
+  to {
+    opacity: 1;
+  }
+}
+
 /* ---- Scroll reveal (skipped entirely under reduced motion) ---- */
 @media (prefers-reduced-motion: no-preference) {
   .js .reveal {
